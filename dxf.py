@@ -548,7 +548,8 @@ class DXF_CLASS:
         # Now test for Hidden layer IE Color < 0
         if ( slcolor != None) and (slcolor < 0):
             return
-        if color == None:
+        # 256 is ColorByLayer
+        if (color == None) or (color == 256):
             # default to layer color
             color = slcolor
         if ( color != None) and (color < 0):
@@ -590,9 +591,11 @@ class DXF_CLASS:
             
         if Color_Blue or Layer_Engrave:
             self.eng_coords.append([x0,y0,x1,y1])
-        else: #if (color >= 10 and color <=28) or (color >= 230 and color <=249): #red
-            self.cut_coords.append([x0,y0,x1,y1])
-            
+        else:
+	    # Check if line is red
+	    if (color == 1) or (color >= 10 and color <=28) or (color >= 230 and color <=249):
+                self.cut_coords.append([x0,y0,x1,y1])
+
         self.coords.append([x0,y0,x1,y1])
 
     def eval_entity(self,e,bl,lin_tol=.001,offset=[0,0],scale=[1,1],rotate=0):
