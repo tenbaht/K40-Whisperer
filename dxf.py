@@ -548,8 +548,7 @@ class DXF_CLASS:
         # Now test for Hidden layer IE Color < 0
         if ( slcolor != None) and (slcolor < 0):
             return
-        # 256 is ColorByLayer
-        if (color == None) or (color == 256):
+        if (color == None) or (color == 256): # 256 is ColorByLayer
             # default to layer color
             color = slcolor
         if ( color != None) and (color < 0):
