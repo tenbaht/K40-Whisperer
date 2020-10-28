@@ -592,7 +592,7 @@ class DXF_CLASS:
             self.eng_coords.append([x0,y0,x1,y1])
         else:
 	    # Check if line is red
-	    if (color == 1) or (color >= 10 and color <=28) or (color >= 230 and color <=249):
+            if (color == 1) or (color >= 10 and color <=28) or (color >= 230 and color <=249):
                 self.cut_coords.append([x0,y0,x1,y1])
 
         self.coords.append([x0,y0,x1,y1])
