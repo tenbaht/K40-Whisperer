@@ -321,3 +321,5 @@ Version 0.64:
 Version 0.65:
 - Updated to work with latest Pillow release (changed ANTIALIAS call to LANCZOS)
 
+Version 0.66:
+- Fixed error that occurred with Inkscape 1.3 and files with empty text objects 
