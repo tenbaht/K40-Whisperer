@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-version = '0.66'
+version = '0.67'
 title_text = "K40 Whisperer V"+version
 
 import sys
@@ -3396,18 +3396,18 @@ class Application(Frame):
             if self.inputCSYS.get() and self.RengData.image == None:
                 xmin,xmax,ymin,ymax = 0.0,0.0,0.0,0.0
             else:
-                xmin,xmax,ymin,ymax = self.Get_Design_Bounds()
+                xmin,xmax,ymin,ymax = self.Get_Design_Bounds() 
                         
             startx = xmin
             starty = ymax
 
             if self.HomeUR.get():
                 Xscale = float(self.LaserXscale.get())
-                FlipXoffset = Xscale*abs(xmax-xmin)
+                FlipXoffset = Xscale*xmin + Xscale*xmax
                 if self.rotate.get():
                     startx = -xmin
             else:
-                FlipXoffset = 0
+                FlipXoffset = None
 
             if self.rotary.get():
                 Rapid_Feed = float(self.rapid_feed.get())*feed_factor
