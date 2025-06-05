@@ -330,3 +330,7 @@ Version 0.67:
 Version 0.68:
 - Fixed "Zoom to Design Size" for machines that home in upper right.
 
+Version 0.69:
+- Added support for laser power control with LASER-M3 (M3 Nano) controller boards (needs to be properly wired to work)
+- Added support for software test pulse laser with LASER-M3 (M3 Nano) controller boards
+

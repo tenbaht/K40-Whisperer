@@ -2,7 +2,7 @@
 """
     K40 Whisperer
 
-    Copyright (C) <2017-2023>  <Scorch>
+    Copyright (C) <2017-2025>  <Scorch>
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-version = '0.68'
+version = '0.69'
 title_text = "K40 Whisperer V"+version
 
 import sys
@@ -149,8 +149,11 @@ class Application(Frame):
         self.initComplete = 0
         self.stop=[True]
         
-        self.k40 = None
-        self.run_time = 0
+        self.k40        = None
+        self.run_time   = 0
+        self.display_power = False
+        self.display_test  = False
+        self.pi_mode_height = 625
         
         self.master.bind("<Configure>", self.Master_Configure)
         self.master.bind('<Enter>', self.bindConfigure)
@@ -229,7 +232,9 @@ class Application(Frame):
         self.include_Gcde = BooleanVar()
         self.include_Time = BooleanVar()
 
-        self.advanced = BooleanVar()
+        self.advanced     = BooleanVar()
+        self.show_power   = BooleanVar()
+        self.show_test    = BooleanVar()
         
         self.halftone     = BooleanVar()
         self.mirror       = BooleanVar()
@@ -256,6 +261,15 @@ class Application(Frame):
         self.Veng_feed  = StringVar()
         self.Vcut_feed  = StringVar()
 
+        self.Reng_power  = StringVar()
+        self.Veng_power  = StringVar()
+        self.Vcut_power  = StringVar()
+        self.Gcode_power = StringVar()
+        self.Trace_power = StringVar()
+        self.max_power   = StringVar()
+        self.test_power  = StringVar()
+        self.test_time   = StringVar()
+
         self.Reng_passes = StringVar()
         self.Veng_passes = StringVar()
         self.Vcut_passes = StringVar()
@@ -267,6 +281,7 @@ class Application(Frame):
         self.jog_step   = StringVar()
         self.rast_step  = StringVar()
         self.funits     = StringVar()
+        self.funits_label=StringVar()
         
 
         self.bezier_M1     = StringVar()
@@ -327,6 +342,8 @@ class Application(Frame):
         self.include_Gcde.set(1)
         self.include_Time.set(0)
         self.advanced.set(0)
+        self.show_power.set(1)
+        self.show_test.set(1)
         
         self.halftone.set(1)
         self.mirror.set(0)
@@ -352,6 +369,16 @@ class Application(Frame):
         self.Reng_feed.set("100")
         self.Veng_feed.set("20")
         self.Vcut_feed.set("10")
+
+        self.Reng_power.set("0.5")
+        self.Veng_power.set("0.5")
+        self.Vcut_power.set("0.5")
+        self.Gcode_power.set("0.5")
+        self.Trace_power.set("0.5")
+        self.max_power.set("30")
+        self.test_power.set("0.5")
+        self.test_time.set("250")
+        
         self.Reng_passes.set("1")
         self.Veng_passes.set("1")
         self.Vcut_passes.set("1")
@@ -371,6 +398,7 @@ class Application(Frame):
         
                                         
         self.board_name.set("LASER-M2") # Options are
+                                        #    "LASER-M3",
                                         #    "LASER-M2",
                                         #    "LASER-M1",
                                         #    "LASER-M",
@@ -447,10 +475,12 @@ class Application(Frame):
         # Derived variables
         if self.units.get() == 'in':
             self.funits.set('in/min')
+            self.funits_label.set('Speed\nin/min')
             self.units_scale = 1.0
         else:
             self.units.set('mm')
             self.funits.set('mm/s')
+            self.funits_label.set('Speed\nmm/s')
             self.units_scale = 25.4
         
         self.statusMessage = StringVar()
@@ -495,7 +525,8 @@ class Application(Frame):
         self.separator2 = Frame(self.master, height=2, bd=1, relief=SUNKEN)
         self.separator3 = Frame(self.master, height=2, bd=1, relief=SUNKEN)
         self.separator4 = Frame(self.master, height=2, bd=1, relief=SUNKEN)
-        
+
+        #Speed
         self.Label_Reng_feed_u = Label(self.master,textvariable=self.funits, anchor=W)
         self.Entry_Reng_feed   = Entry(self.master,width="15")
         self.Entry_Reng_feed.configure(textvariable=self.Reng_feed,justify='center',fg="black")
@@ -514,6 +545,52 @@ class Application(Frame):
         self.Vcut_feed.trace_variable("w", self.Entry_Vcut_feed_Callback)
         self.NormalColor =  self.Entry_Vcut_feed.cget('bg')
 
+        #Power
+        self.Label_feed_u  = Label(self.master,textvariable=self.funits_label, anchor=CENTER)
+        self.Label_power_u = Label(text="Power\nFraction", anchor=CENTER)
+
+        self.Label_time_u  = Label(text="Time\nmSec", anchor=CENTER)
+        self.Label_power2_u= Label(text="Power\nFraction", anchor=CENTER)
+                        
+        
+        self.Entry_Reng_power   = Entry(self.master,width="15")
+        self.Entry_Reng_power.configure(textvariable=self.Reng_power,justify='center',fg="black")
+        self.Reng_power.trace_variable("w", self.Entry_Reng_power_Callback)
+        self.NormalColor =  self.Entry_Reng_power.cget('bg')
+
+        self.Entry_Veng_power   = Entry(self.master,width="15")
+        self.Entry_Veng_power.configure(textvariable=self.Veng_power,justify='center',fg="blue")
+        self.Veng_power.trace_variable("w", self.Entry_Veng_power_Callback)
+        self.NormalColor =  self.Entry_Veng_power.cget('bg')
+
+        self.Entry_Vcut_power   = Entry(self.master,width="15")
+        self.Entry_Vcut_power.configure(textvariable=self.Vcut_power,justify='center',fg="red")
+        self.Vcut_power.trace_variable("w", self.Entry_Vcut_power_Callback)
+        self.NormalColor =  self.Entry_Vcut_power.cget('bg')
+
+        self.Entry_Gcode_power   = Entry(self.master,width="15")
+        self.Entry_Gcode_power.configure(textvariable=self.Gcode_power,justify='center',fg="red")
+        self.Gcode_power.trace_variable("w", self.Entry_Gcode_power_Callback)
+        self.NormalColor =  self.Entry_Gcode_power.cget('bg')
+
+
+        ### Test Fire ###
+        self.Test_Button  = Button(self.master,text="Test Fire Laser", command=self.Test_Fire)
+        self.Label_Test_time_u = Label(self.master,text="ms", anchor=W)
+        self.Entry_Test_time   = Entry(self.master,width="15")
+        self.Entry_Test_time.configure(textvariable=self.test_time,justify='center',fg="black")
+
+        self.test_time.trace_variable("w", self.Entry_Test_time_Callback)
+        self.NormalColor =  self.Entry_Test_time.cget('bg')
+        
+        self.Entry_Test_power   = Entry(self.master,width="15")
+        self.Label_Test_power_u = Label(self.master,text="%", anchor=W)
+        self.Entry_Test_power.configure(textvariable=self.test_power,justify='center',fg="black")
+        self.test_power.trace_variable("w", self.Entry_Test_power_Callback)
+        self.NormalColor =  self.Entry_Test_power.cget('bg')
+
+        ##################
+                        
         # Buttons
         self.Reng_Button  = Button(self.master,text="Raster Engrave", command=self.Raster_Eng)
         self.Veng_Button  = Button(self.master,text="Vector Engrave", command=self.Vector_Eng)
@@ -827,15 +904,15 @@ class Application(Frame):
                 pass
         elif calc_flag == 3:
             try:
-                val2.configure( bg = 'red' )
+                val2.configure( bg = 'red3' )
                 self.statusbar.configure( bg = 'red' )
                 self.statusMessage.set(" Value should be a number. ")
             except:
                 pass
         elif calc_flag == 2:
             try:
+                val2.configure( bg = 'red3' )
                 self.statusbar.configure( bg = 'red' )
-                val2.configure( bg = 'red' )
             except:
                 pass
         elif (calc_flag == 0 or calc_flag == 1) and new==1 :
@@ -911,9 +988,11 @@ class Application(Frame):
         header.append('(k40_whisperer_set include_Vcut  %s )'  %( int(self.include_Vcut.get())  ))
         header.append('(k40_whisperer_set include_Gcde  %s )'  %( int(self.include_Gcde.get())  ))
         header.append('(k40_whisperer_set include_Time  %s )'  %( int(self.include_Time.get())  ))
-        
+
         header.append('(k40_whisperer_set halftone      %s )'  %( int(self.halftone.get())      ))
         header.append('(k40_whisperer_set HomeUR        %s )'  %( int(self.HomeUR.get())        ))
+        header.append('(k40_whisperer_set show_power    %s )'  %( int(self.show_power.get())    ))
+        header.append('(k40_whisperer_set show_test     %s )'  %( int(self.show_test.get())     ))
         header.append('(k40_whisperer_set inputCSYS     %s )'  %( int(self.inputCSYS.get())     ))
         header.append('(k40_whisperer_set advanced      %s )'  %( int(self.advanced.get())      ))
         header.append('(k40_whisperer_set mirror        %s )'  %( int(self.mirror.get())        ))
@@ -940,11 +1019,18 @@ class Application(Frame):
         header.append('(k40_whisperer_set trace_w_laser %s )'  %( int(self.trace_w_laser.get()) ))
 
         # STRING.get()
+        header.append('(k40_whisperer_set max_power     %s )'  %( self.max_power.get()      ))
         header.append('(k40_whisperer_set board_name    %s )'  %( self.board_name.get()     ))
         header.append('(k40_whisperer_set units         %s )'  %( self.units.get()          ))
+        
         header.append('(k40_whisperer_set Reng_feed     %s )'  %( self.Reng_feed.get()      ))
         header.append('(k40_whisperer_set Veng_feed     %s )'  %( self.Veng_feed.get()      ))
         header.append('(k40_whisperer_set Vcut_feed     %s )'  %( self.Vcut_feed.get()      ))
+
+        header.append('(k40_whisperer_set Reng_power    %s )'  %( self.Reng_power.get()    ))
+        header.append('(k40_whisperer_set Veng_power    %s )'  %( self.Veng_power.get()    ))
+        header.append('(k40_whisperer_set Vcut_power    %s )'  %( self.Vcut_power.get()    ))
+
         header.append('(k40_whisperer_set jog_step      %s )'  %( self.jog_step.get()       ))
 
         header.append('(k40_whisperer_set Reng_passes   %s )'  %( self.Reng_passes.get()    ))
@@ -970,7 +1056,11 @@ class Application(Frame):
         header.append('(k40_whisperer_set bezier_weight %s )'  %( self.bezier_weight.get()  ))
 
         header.append('(k40_whisperer_set trace_gap     %s )'  %( self.trace_gap.get()      ))
-        header.append('(k40_whisperer_set trace_speed   %s )'  %( self.trace_speed.get()    ))      
+        header.append('(k40_whisperer_set trace_speed   %s )'  %( self.trace_speed.get()    ))
+        header.append('(k40_whisperer_set Trace_power   %s )'  %( self.Trace_power.get()    ))
+
+        header.append('(k40_whisperer_set test_time     %s )'  %( self.test_time.get()      ))
+        header.append('(k40_whisperer_set test_power    %s )'  %( self.test_power.get()     ))
         
 ##        header.append('(k40_whisperer_set unsharp_flag  %s )'  %( int(self.unsharp_flag.get())  ))
 ##        header.append('(k40_whisperer_set unsharp_r     %s )'  %( self.unsharp_r.get()      ))
@@ -1174,6 +1264,11 @@ class Application(Frame):
         Raster_eng_feed = float(self.Reng_feed.get()) / factor
         Vector_eng_feed = float(self.Veng_feed.get()) / factor
         Vector_cut_feed = float(self.Vcut_feed.get()) / factor
+
+        Raster_eng_power = float(self.Reng_power.get())
+        Vector_eng_power = float(self.Veng_power.get())
+        Vector_cut_power = float(self.Vcut_power.get())
+        Gcode_power      = float(self.Gcode_power.get())
         
         Raster_eng_passes = float(self.Reng_passes.get())
         Vector_eng_passes = float(self.Veng_passes.get())
@@ -1300,7 +1395,117 @@ class Application(Frame):
         return 0         # Value is a valid number
     def Entry_Vcut_feed_Callback(self, varName, index, mode):
         self.entry_set(self.Entry_Vcut_feed, self.Entry_Vcut_feed_Check(), new=1)
+
+
+    #Power
+        #############################
+    def Entry_Reng_power_Check(self):
+        try:
+            value = float(self.Reng_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Reng_power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Reng_power, self.Entry_Reng_power_Check(), new=1)        
+    #############################
+    def Entry_Veng_power_Check(self):
+        try:
+            value = float(self.Veng_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Veng_power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Veng_power, self.Entry_Veng_power_Check(), new=1)
+    #############################
+    def Entry_Vcut_power_Check(self):
+        try:
+            value = float(self.Vcut_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Vcut_power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Vcut_power, self.Entry_Vcut_power_Check(), new=1)
         
+    #############################
+    def Entry_Trace_Power_Check(self):
+        try:
+            value = float(self.Trace_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Trace_Power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Trace_Power, self.Entry_Trace_Power_Check(), new=1)
+    #############################
+    def Entry_Gcode_power_Check(self):
+        try:
+            value = float(self.Gcode_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Gcode_power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Gcode_power, self.Entry_Gcode_power_Check(), new=1)
+    #############################
+    def Entry_Test_power_Check(self):
+        try:
+            value = float(self.test_power.get())
+            low_limit  = 0
+            high_limit = 1.
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Power fraction should be between 0.00 and 1.00 ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Test_power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Test_power, self.Entry_Test_power_Check(), new=1)
+    #############################
+    def Entry_Test_time_Check(self):
+        try:
+            value = float(self.test_time.get())
+            low_limit  = 0
+            high_limit = 9999
+            if  value < 0 or value > high_limit:
+                self.statusMessage.set(" Time should be between 0 and 9999 ms ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        self.refreshTime()
+        return 0         # Value is a valid number
+    def Entry_Test_time_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Test_time, self.Entry_Test_time_Check(), new=1)
+    # End power
+
     #############################
     def Entry_Step_Check(self):
         try:
@@ -1499,6 +1704,19 @@ class Application(Frame):
         self.entry_set(self.Entry_Laser_Area_Width,self.Entry_Laser_Area_Width_Check(), new=1)
 
     #############################
+    def Entry_Max_Power_Check(self):
+        try:
+            value = float(self.max_power.get())
+            if  value < 0.0 or value > 100.0:
+                self.statusMessage.set(" Max power should be between 0% and 100% ")
+                return 2 # Value is invalid number
+        except:
+            return 3     # Value not a number
+        return 0         # Value is a valid number
+    def Entry_Max_Power_Callback(self, varName, index, mode):
+        self.entry_set(self.Entry_Max_Power,self.Entry_Max_Power_Check(), new=1)
+
+    #############################
     def Entry_Laser_Area_Height_Check(self):
         try:
             value = float(self.LaserYsize.get())
@@ -1682,9 +1900,11 @@ class Application(Frame):
     def Entry_units_var_Callback(self):
         if (self.units.get() == 'in') and (self.funits.get()=='mm/s'):
             self.funits.set('in/min')
+            self.funits_label.set('Speed\nin/min')
             self.Scale_Linear_Inputs('in')
         elif (self.units.get() == 'mm') and (self.funits.get()=='in/min'):
             self.funits.set('mm/s')
+            self.funits_label.set('Speed\nmm/s')
             self.Scale_Linear_Inputs('mm')
             
     def Scale_Linear_Inputs(self, new_units=None):
@@ -1935,7 +2155,7 @@ class Application(Frame):
             y_start_mils = 0
 
         try:
-            self.send_egv_data(EGV_data,n_passes)
+            self.send_egv_data(EGV_data,n_passes, power_level=None)
         except MemoryError as e:
             msg1 = "Memory Error:"
             msg2 = "Memory Error:  Out of Memory."
@@ -1945,6 +2165,7 @@ class Application(Frame):
             debug_message(traceback.format_exc())
             
         except Exception as e:
+            #print(traceback.format_exc())
             msg1 = "Sending Data Stopped: "
             msg2 = "%s" %(e)
             if msg2 == "":
@@ -2473,7 +2694,11 @@ class Application(Frame):
                     elif "negate"  in line:
                         self.negate.set(line[line.find("negate"):].split()[1])
                     elif "HomeUR"  in line:
-                        self.HomeUR.set(line[line.find("HomeUR"):].split()[1])                    
+                        self.HomeUR.set(line[line.find("HomeUR"):].split()[1])
+                    elif "show_power"  in line:
+                        self.show_power.set(line[line.find("show_power"):].split()[1])
+                    elif "show_test"  in line:
+                        self.show_test.set(line[line.find("show_test"):].split()[1])
                     elif "inputCSYS"  in line:
                         self.inputCSYS.set(line[line.find("inputCSYS"):].split()[1])
                     elif "advanced"  in line:
@@ -2527,6 +2752,18 @@ class Application(Frame):
                          self.Veng_feed .set(line[line.find("Veng_feed"):].split()[1])  
                     elif "Vcut_feed"    in line:
                          self.Vcut_feed.set(line[line.find("Vcut_feed"):].split()[1])
+
+                    elif "max_power"    in line:
+                         self.max_power.set(line[line.find("max_power"):].split()[1])  
+                    elif "Reng_power"    in line:
+                         self.Reng_power .set(line[line.find("Reng_power"):].split()[1])
+                    elif "Veng_power"    in line:
+                         self.Veng_power .set(line[line.find("Veng_power"):].split()[1])  
+                    elif "Vcut_power"    in line:
+                         self.Vcut_power.set(line[line.find("Vcut_power"):].split()[1]) 
+                    elif "Gcode_power"    in line:
+                         self.Gcode_power.set(line[line.find("Gcode_power"):].split()[1])
+                         
                     elif "jog_step"    in line:
                          self.jog_step.set(line[line.find("jog_step"):].split()[1])
                          
@@ -2574,6 +2811,13 @@ class Application(Frame):
                          self.trace_gap.set(line[line.find("trace_gap"):].split()[1])
                     elif "trace_speed"    in line:
                          self.trace_speed.set(line[line.find("trace_speed"):].split()[1])
+                    elif "Trace_power"    in line:
+                         self.Trace_power.set(line[line.find("Trace_power"):].split()[1])
+
+                    elif "test_time"    in line:
+                         self.test_time.set(line[line.find("test_time"):].split()[1])
+                    elif "test_power"    in line:
+                         self.test_power.set(line[line.find("test_power"):].split()[1])               
 
     ##                elif "unsharp_flag"    in line:
     ##                     self.unsharp_flag.set(line[line.find("unsharp_flag"):].split()[1])
@@ -2617,10 +2861,12 @@ class Application(Frame):
 
         if self.units.get() == 'in':
             self.funits.set('in/min')
+            self.funits_label.set('Speed\nin/min')
             self.units_scale = 1.0
         else:
             self.units.set('mm')
             self.funits.set('mm/s')
+            self.funits_label.set('Speed\nmm/s')
             self.units_scale = 25.4
 
         temp_name, fileExtension = os.path.splitext(filename)
@@ -2883,7 +3129,7 @@ class Application(Frame):
         Rapid_inst = egv(target=lambda s:Rapid_data.append(s))
         Rapid_feed = float(self.rapid_feed.get())*self.feed_factor()
         Rapid_inst.make_egv_rapid(dxmils,dymils,Feed=Rapid_feed,board_name=self.board_name.get())
-        self.send_egv_data(Rapid_data, 1, None)
+        self.send_egv_data(Rapid_data, 1, power_level=None)
         self.stop[0]=True
 
     def update_gui(self, message=None, bgcolor='white'):
@@ -3383,6 +3629,7 @@ class Application(Frame):
         else:
             feed_factor = 1.0
         return feed_factor
+
   
     def send_data(self,operation_type=None, output_filename=None):
         num_passes=0
@@ -3581,48 +3828,140 @@ class Application(Frame):
                                                 use_laser=True
                                                 )
                 
-            ### Join Resulting Data together ###
-            data=[]
-            data.append(ord("I"))
-            if Trace_Eng_data!=[]:
-                trace_passes=1
-                for k in range(trace_passes):
-                    if len(data)> 4:
-                        data[-4]=ord("@")
-                    data.extend(Trace_Eng_data)
-            if Raster_Eng_data!=[]:
-                num_passes = int(float(self.Reng_passes.get()))
-                for k in range(num_passes):
-                    if len(data)> 4:
-                        data[-4]=ord("@")
-                    data.extend(Raster_Eng_data)
-            if Vector_Eng_data!=[]:
-                num_passes = int(float(self.Veng_passes.get()))
-                for k in range(num_passes):
-                    if len(data)> 4:
-                        data[-4]=ord("@")
-                    data.extend(Vector_Eng_data)
-            if Vector_Cut_data!=[]:
-                num_passes = int(float(self.Vcut_passes.get()))
-                for k in range(num_passes):
-                    if len(data)> 4:
-                        data[-4]=ord("@")
-                    data.extend(Vector_Cut_data)
-            if G_code_Cut_data!=[]:
-                num_passes = int(float(self.Gcde_passes.get()))
-                for k in range(num_passes):
-                    if len(data)> 4:
-                        data[-4]=ord("@")
-                    data.extend(G_code_Cut_data)
-            if len(data)< 4:
-                raise Exception("No laser data was generated.")    
-                
-            self.master.update()
-            if output_filename != None:
-                self.write_egv_to_file(data,output_filename)
+            if self.display_power:
+                #########################################################
+                ### Send data to laser with power changed in between  ###
+                #########################################################
+                max_power = float(self.max_power.get())
+                if Trace_Eng_data!=[]:
+                    data=[]
+                    data.append(ord("I"))
+                    trace_passes=1
+                    for k in range(trace_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Trace_Eng_data)
+                        
+                    power_fraction = float(self.Trace_power.get())
+                    if power_fraction > 1: power_fraction=0
+                    power = power_fraction*max_power
+        
+                    self.send_egv_data(data, 1, power_level=power)
+                    self.menu_View_Refresh()
+                        
+                if Raster_Eng_data!=[]:
+                    data=[]
+                    data.append(ord("I"))
+                    num_passes = int(float(self.Reng_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Raster_Eng_data)
+                    power_fraction = float(self.Reng_power.get())
+                    if power_fraction > 1: power_fraction=0
+                    power = power_fraction*max_power
+                    self.send_egv_data(data, 1, power_level=power)
+                    self.menu_View_Refresh()
+
+                if Vector_Eng_data!=[]:
+                    data=[]
+                    data.append(ord("I"))
+                    num_passes = int(float(self.Veng_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Vector_Eng_data)
+                    power_fraction = float(self.Veng_power.get())
+                    if power_fraction > 1: power_fraction=0
+                    power = power_fraction*max_power
+                    self.send_egv_data(data, 1, power_level=power)
+                    self.menu_View_Refresh()
+
+                if Vector_Cut_data!=[]:
+                    data=[]
+                    data.append(ord("I"))
+                    num_passes = int(float(self.Vcut_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Vector_Cut_data)
+                    power_fraction = float(self.Vcut_power.get())
+                    if power_fraction > 1: power_fraction=0
+                    power = power_fraction*max_power
+                    self.send_egv_data(data, 1, power_level=power)
+                    self.menu_View_Refresh()
+
+                if G_code_Cut_data!=[]:
+                    data=[]
+                    data.append(ord("I"))
+                    num_passes = int(float(self.Gcde_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(G_code_Cut_data)
+                    power_fraction = float(self.Gcode_power.get())
+                    if power_fraction > 1: power_fraction=0
+                    power = power_fraction*max_power
+                    self.send_egv_data(data, 1, power_level=power)
+                    self.menu_View_Refresh()
+
+                #if len(data)< 4:
+                #    raise Exception("No laser data was generated.")
+                #########################################################
+                self.master.update()
+                #if output_filename != None:
+                #    self.write_egv_to_file(data,output_filename)
+                #else:
+                #    self.send_egv_data(data, 1, power_level=None)
+                #    self.menu_View_Refresh()
+                #########################################################
             else:
-                self.send_egv_data(data, 1, output_filename)
-                self.menu_View_Refresh()
+                #########################################################
+                ### Join Resulting Data together for export into file ###
+                ### Power settings are not saved to the file          ###
+                #########################################################
+                data=[]
+                data.append(ord("I"))
+                if Trace_Eng_data!=[]:
+                    trace_passes=1
+                    for k in range(trace_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Trace_Eng_data)
+                if Raster_Eng_data!=[]:
+                    num_passes = int(float(self.Reng_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Raster_Eng_data)
+                if Vector_Eng_data!=[]:
+                    num_passes = int(float(self.Veng_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Vector_Eng_data)
+                if Vector_Cut_data!=[]:
+                    num_passes = int(float(self.Vcut_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(Vector_Cut_data)
+                if G_code_Cut_data!=[]:
+                    num_passes = int(float(self.Gcde_passes.get()))
+                    for k in range(num_passes):
+                        if len(data)> 4:
+                            data[-4]=ord("@")
+                        data.extend(G_code_Cut_data)
+                if len(data)< 4:
+                    raise Exception("No laser data was generated.")
+                #########################################################
+                self.master.update()
+                if output_filename != None:
+                    self.write_egv_to_file(data,output_filename)
+                else:
+                    self.send_egv_data(data, 1, power_level=None)
+                    self.menu_View_Refresh()
+                #########################################################
                 
         except MemoryError as e:
             msg1 = "Memory Error:"
@@ -3633,6 +3972,7 @@ class Application(Frame):
             debug_message(traceback.format_exc())
         
         except Exception as e:
+            #print(traceback.format_exc())
             msg1 = "Sending Data Stopped: "
             msg2 = "%s" %(e)
             if msg2 == "":
@@ -3642,12 +3982,14 @@ class Application(Frame):
             message_box(msg1, msg2)
             debug_message(traceback.format_exc())
 
-    def send_egv_data(self,data,num_passes=1,output_filename=None):        
+    def send_egv_data(self,data,num_passes=1,power_level=None):
         pre_process_CRC        = self.pre_pr_crc.get()
         if self.k40 != None:
-            self.k40.timeout       = int(float( self.t_timeout.get()  )) 
+            self.k40.timeout       = int(float( self.t_timeout.get()  ))
             self.k40.n_timeouts    = int(float( self.n_timeouts.get() ))
             time_start = time()
+            if (power_level != None):
+                self.k40.set_PWM_register(power_level)
             self.k40.send_data(data,self.update_gui,self.stop,num_passes,pre_process_CRC, wait_for_laser=self.wait.get())
             self.run_time = time()-time_start
             if DEBUG:
@@ -3658,7 +4000,36 @@ class Application(Frame):
             self.statusbar.configure( bg = 'yellow' )
             return
         self.menu_View_Refresh()
-        
+
+    def Test_Fire(self):
+        time=int(float(self.test_time.get()))
+        if time > 1000: time=0
+        max_power = float(self.max_power.get())
+        power_fraction = float(self.test_power.get())
+        if power_fraction > 1: power_fraction=0
+        power_level = power_fraction*max_power
+        if self.k40 != None:
+            try:
+                if (time < 1 or power_level == 0):
+                    self.k40.set_PWM_register(power_level)
+                else:
+                    self.k40.pulse_laser(pct_power=power_level, ms=time)
+            except Exception as e:
+                #print(traceback.format_exc())
+                msg1 = "Operation Failed: "
+                msg2 = "%s" %(e)
+                if msg2 == "":
+                    formatted_lines = traceback.format_exc().splitlines()
+                self.statusMessage.set((msg1+msg2).split("\n")[0] )
+                self.statusbar.configure( bg = 'red' )
+                message_box(msg1, msg2)
+                debug_message(traceback.format_exc())
+        else:
+            self.statusMessage.set("Laser is not initialized.")
+            self.statusbar.configure( bg = 'yellow' )
+            return
+         
+                
     ##########################################################################
     ##########################################################################
     def write_egv_to_file(self,data,fname):
@@ -3955,6 +4326,15 @@ class Application(Frame):
     def Master_Configure(self, event, update=0):
         if event.widget != self.master:
             return
+        
+        self.display_power = False
+        self.display_test  = False
+        if (self.board_name.get()=='LASER-M3'):
+            if self.show_power.get():
+                self.display_power = True
+                if self.show_test.get():
+                    self.display_test = True    
+            
         x = int(self.master.winfo_x())
         y = int(self.master.winfo_y())
         w = int(self.master.winfo_width())
@@ -3971,12 +4351,13 @@ class Application(Frame):
             if True:                
                 # Left Column #
                 w_label=90
-                w_entry=48
+                w_entry=46
                 w_units=52
 
                 x_label_L=10
                 x_entry_L=x_label_L+w_label+20-5
-                x_units_L=x_entry_L+w_entry+2
+                x_units_L=x_entry_L+w_entry+4
+                x_power_L=x_units_L+2 #x_entry_L+w_entry+2 +w_entry+2
 
                 Yloc=10
                 self.Initialize_Button.place (x=12, y=Yloc, width=100*2, height=23)
@@ -3984,7 +4365,7 @@ class Application(Frame):
 
                 self.Open_Button.place (x=12, y=Yloc, width=100, height=40)
                 self.Reload_Button.place(x=12+100, y=Yloc, width=100, height=40)                
-                if h>=560:
+                if h>=self.pi_mode_height:
                     Yloc=Yloc+50
                     self.separator1.place(x=x_label_L, y=Yloc,width=w_label+75+40, height=2)
                     Yloc=Yloc+6
@@ -4078,21 +4459,37 @@ class Application(Frame):
                     Yloc=Yloc-30
                     self.Vcut_Button.place      (x=12, y=Yloc, width=100, height=23)
                     self.Entry_Vcut_feed.place  (x=x_entry_L, y=Yloc, width=w_entry, height=23)
-                    self.Label_Vcut_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
+                    if (self.display_power):
+                        self.Label_Vcut_feed_u.place_forget()
+                        self.Entry_Vcut_power.place (x=x_power_L, y=Yloc, width=w_entry, height=23)
+                    else:
+                        self.Entry_Vcut_power.place_forget()
+                        self.Label_Vcut_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
                     Y_Vcut=Yloc
 
                     Yloc=Yloc-30
                     self.Veng_Button.place  (x=12, y=Yloc, width=100, height=23)
                     self.Entry_Veng_feed.place(  x=x_entry_L, y=Yloc, width=w_entry, height=23)
-                    self.Label_Veng_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
+
+                    if (self.display_power):
+                        self.Label_Veng_feed_u.place_forget()
+                        self.Entry_Veng_power.place(  x=x_power_L, y=Yloc, width=w_entry, height=23)
+                    else:
+                        self.Entry_Veng_power.place_forget()
+                        self.Label_Veng_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
                     Y_Veng=Yloc
                     
                     Yloc=Yloc-30
                     self.Reng_Button.place  (x=12, y=Yloc, width=100, height=23)
                     self.Entry_Reng_feed.place(  x=x_entry_L, y=Yloc, width=w_entry, height=23)
-                    self.Label_Reng_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
+                    if (self.display_power):
+                        self.Label_Reng_feed_u.place_forget()
+                        self.Entry_Reng_power.place(  x=x_power_L, y=Yloc, width=w_entry, height=23)
+                    else:
+                        self.Entry_Reng_power.place_forget()
+                        self.Label_Reng_feed_u.place(x=x_units_L, y=Yloc, width=w_units, height=23)
+
                     Y_Reng=Yloc
-                    
                     if self.comb_vector.get() or self.comb_engrave.get():
                         if self.comb_engrave.get():
                             self.Veng_Button.place_forget()                    
@@ -4108,30 +4505,89 @@ class Application(Frame):
                                 self.Reng_Veng_Button.place(x=12, y=Y_Reng, width=100, height=23*2+7)
                         elif self.comb_vector.get():
                             self.Veng_Vcut_Button.place(x=12, y=Y_Veng, width=100, height=23*2+7)
+
+                    
+                    if (self.display_power and h>=self.pi_mode_height):
+                        Yloc=Yloc-35
+                        self.Label_feed_u.place(x=x_entry_L, y=Yloc, width=w_entry, height=33)
+                        self.Label_power_u.place(x=x_power_L, y=Yloc, width=w_entry, height=33)
+                        #self.Label_feed_u.configure( bg = 'white', anchor=CENTER )
+                        #self.Label_power_u.configure( bg = 'white', anchor=CENTER )
+                    else:
+                        self.Label_feed_u.place_forget()
+                        self.Label_power_u.place_forget()
+                        pass
+
+                    if (self.display_test and h>=self.pi_mode_height):
+                        Yloc=Yloc-30
+                        self.Test_Button.place  (x=12, y=Yloc, width=100, height=23)
+                        self.Entry_Test_power.place(  x=x_power_L, y=Yloc, width=w_entry, height=23)
+                        self.Entry_Test_time.place(  x=x_entry_L, y=Yloc, width=w_entry, height=23)
+                        
+                        Yloc=Yloc-35
+                        self.Label_time_u.place(x=x_entry_L, y=Yloc, width=w_entry, height=33)
+                        self.Label_power2_u.place(x=x_power_L, y=Yloc, width=w_entry, height=33)
+                        #self.Label_time_u.configure( bg = 'white', anchor=CENTER )
+                        #self.Label_power2_u.configure( bg = 'white', anchor=CENTER )
+                    else:
+                        self.Test_Button.place_forget()
+                        self.Entry_Test_time.place_forget()
+                        self.Entry_Test_power.place_forget()
+                        self.Label_time_u.place_forget()
+                        self.Label_power2_u.place_forget()
                    
                     
                 else:
                     self.Vcut_Button.place_forget()
                     self.Entry_Vcut_feed.place_forget()
                     self.Label_Vcut_feed_u.place_forget()
+                    self.Entry_Vcut_power.place_forget()
                     
                     self.Veng_Button.place_forget()
                     self.Entry_Veng_feed.place_forget()
                     self.Label_Veng_feed_u.place_forget()
+                    self.Entry_Veng_power.place_forget()
                     
                     self.Reng_Button.place_forget()
                     self.Entry_Reng_feed.place_forget()
                     self.Label_Reng_feed_u.place_forget()
+                    self.Entry_Reng_power.place_forget()
+
+                    self.Test_Button.place_forget()
+                    self.Entry_Test_time.place_forget()
+                    self.Entry_Test_power.place_forget()
+                    self.Label_time_u.place_forget()
+                    self.Label_power2_u.place_forget()
 
                     self.Reng_Veng_Vcut_Button.place_forget()
                     self.Reng_Veng_Button.place_forget()
                     self.Veng_Vcut_Button.place_forget()
+
+                    self.Label_feed_u.place_forget()
+                    self.Label_power_u.place_forget()
                     
                     Yloc=Yloc-30
                     self.Grun_Button.place  (x=12, y=Yloc, width=100*2, height=23)
-                    
-                if h>=560:
-                    Yloc=Yloc-15
+                    if (self.display_power):
+                        Yloc=Yloc-30
+                        if (self.display_power):
+                            self.Entry_Gcode_power.place(  x=x_power_L, y=Yloc, width=w_entry, height=23)
+                        else:
+                            self.Entry_Gcode_power.place_forget()
+                        d=10
+                        Yloc=Yloc-25-d
+                        self.Label_power_u.place(x=x_power_L, y=Yloc, width=w_entry, height=23+d)
+                        #self.Label_power_u.configure( bg = 'white', anchor=CENTER )
+                    else:
+                        self.Label_power_u.place_forget()
+                        self.Entry_Gcode_power.place_forget()
+                        pass
+ 
+                if h>=self.pi_mode_height:
+                    if (self.display_power):
+                        Yloc=Yloc-5
+                    else:
+                        Yloc=Yloc-15
                     self.separator2.place(x=x_label_L, y=Yloc,width=w_label+75+40, height=2)
                 else:
                     self.separator2.place_forget()
@@ -4149,7 +4605,7 @@ class Application(Frame):
                     adv_Yloc=adv_Yloc+25
                     self.separator_adv.place(x=Xadvanced, y=adv_Yloc,width=wadv_use, height=2)
 
-                    if h>=560:
+                    if h>=self.pi_mode_height:
                         adv_Yloc=adv_Yloc+25-20 #15
                         self.Label_Halftone_adv.place(x=Xadvanced, y=adv_Yloc, width=w_label_adv, height=21)
                         self.Checkbutton_Halftone_adv.place(x=Xadvanced+w_label_adv+2, y=adv_Yloc, width=25, height=23)
@@ -4776,7 +5232,7 @@ class Application(Frame):
     ################################################################################
     def GEN_Settings_Window(self):
         gen_width = 560
-        gen_settings = Toplevel(width=gen_width, height=575) #460+75)
+        gen_settings = Toplevel(width=gen_width, height=700) #460+75)
         gen_settings.grab_set() # Use grab_set to prevent user input in the main window
         gen_settings.focus_set()
         gen_settings.resizable(0,0)
@@ -4925,17 +5381,78 @@ class Application(Frame):
         self.gen_separator2 = Frame(gen_settings, height=2, bd=1, relief=SUNKEN)
         self.gen_separator2.place(x=xd_label_L, y=D_Yloc,width=gen_width-40, height=2)
 
+        D_Yloc=D_Yloc+D_dY*.25
+        self.Label_Inkscape_title2 = Label(gen_settings,text="Laser-M3 Options")
+        self.Label_Inkscape_title2.place(x=xd_label_L, y=D_Yloc, width=gen_width-40, height=21)
+        
+        D_Yloc=D_Yloc+D_dY
+        self.Labelshow_power = Label(gen_settings,text="Show Power Settings")
+        self.Labelshow_power.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
+        self.Checkbuttonshow_power = Checkbutton(gen_settings,text="", anchor=W)
+        self.Checkbuttonshow_power.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
+        self.Checkbuttonshow_power.configure(variable=self.show_power)
+        self.show_power.trace_variable("w",self.menu_View_Refresh_Callback)
+
+        D_Yloc=D_Yloc+D_dY
+        self.Labelshow_test = Label(gen_settings,text="Show Test Fire Button")
+        self.Labelshow_test.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
+        self.Checkbuttonshow_test = Checkbutton(gen_settings,text="", anchor=W)
+        self.Checkbuttonshow_test.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
+        self.Checkbuttonshow_test.configure(variable=self.show_test)
+        self.show_test.trace_variable("w",self.menu_View_Refresh_Callback)
+        
+        D_Yloc=D_Yloc+D_dY
+        self.Label_Max_Power = Label(gen_settings,text="Maximum Power Setting")
+        self.Label_Max_Power.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
+        self.Label_Max_Power_u = Label(gen_settings,text="%   (Setting this too high may damage laser tube)", anchor=W)
+        #self.Label_Max_Power_u.configure( bg = 'white' )
+
+        self.Label_Max_Power_u.place(x=xd_units_L, y=D_Yloc, width=325, height=21)
+        self.Entry_Max_Power = Entry(gen_settings,width="15")
+        self.Entry_Max_Power.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
+        self.Entry_Max_Power.configure(textvariable=self.max_power,justify='center')
+        self.max_power.trace_variable("w", self.Entry_Max_Power_Callback)
+        self.entry_set(self.Entry_Max_Power,self.Entry_Max_Power_Check(),2)
+
+        def update_gen_settings(input1=None,input2=None,input3=None):
+            self.menu_View_Refresh_Callback()
+            if self.board_name.get() == "LASER-M3":
+                self.Labelshow_power.configure(state="normal")
+                self.Checkbuttonshow_power.configure(state="normal")
+                self.Labelshow_test.configure(state="normal")
+                self.Checkbuttonshow_test.configure(state="normal")
+                self.Label_Max_Power.configure(state="normal")
+                self.Label_Max_Power_u.configure(state="normal")
+                self.Entry_Max_Power.configure(state="normal")
+            else:
+                self.Labelshow_power.configure(state="disabled")
+                self.Checkbuttonshow_power.configure(state="disabled")
+                self.Labelshow_test.configure(state="disabled")
+                self.Checkbuttonshow_test.configure(state="disabled")
+                self.Label_Max_Power.configure(state="disabled")
+                self.Label_Max_Power_u.configure(state="disabled")
+                self.Entry_Max_Power.configure(state="disabled")
+                
+                
+
+        update_gen_settings()
+        
+        D_Yloc=D_Yloc+D_dY*1.25
+        self.gen_separator3 = Frame(gen_settings, height=2, bd=1, relief=SUNKEN)
+        self.gen_separator3.place(x=xd_label_L, y=D_Yloc,width=gen_width-40, height=2)
+        
         D_Yloc=D_Yloc+D_dY*.5
         self.Label_no_com = Label(gen_settings,text="Home in Upper Right")
         self.Label_no_com.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
         self.Checkbutton_no_com = Checkbutton(gen_settings,text="", anchor=W)
         self.Checkbutton_no_com.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
         self.Checkbutton_no_com.configure(variable=self.HomeUR)
-        self.HomeUR.trace_variable("w",self.menu_View_Refresh_Callback)        
+        self.HomeUR.trace_variable("w",self.menu_View_Refresh_Callback)
 
         D_Yloc=D_Yloc+D_dY 
         self.Label_Board_Name      = Label(gen_settings,text="Board Name", anchor=CENTER )
         self.Board_Name_OptionMenu = OptionMenu(gen_settings, self.board_name,
+                                            "LASER-M3",
                                             "LASER-M2",
                                             "LASER-M1",
                                             "LASER-M",
@@ -4943,6 +5460,8 @@ class Application(Frame):
                                             "LASER-B1",
                                             "LASER-B",
                                             "LASER-A")
+        self.board_name.trace_variable("w",update_gen_settings)
+        
         self.Label_Board_Name.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
         self.Board_Name_OptionMenu.place(x=xd_entry_L, y=D_Yloc, width=w_entry*3, height=23)
 
@@ -5259,7 +5778,7 @@ class Application(Frame):
     def TRACE_Settings_Window(self, dummy=None):
         if self.GUI_Disabled:
             return
-        trace_window = Toplevel(width=350, height=180)
+        trace_window = Toplevel(width=350, height=210)
         self.trace_window=trace_window
         trace_window.grab_set() # Use grab_set to prevent user input in the main window during calculations
         trace_window.resizable(0,0)
@@ -5277,6 +5796,20 @@ class Application(Frame):
             win_id.destroy()
             self.Trace_Eng()
 
+        self.Label_Trace_Power = Label(trace_window,text="Laser Power Level During Trace")
+        self.Entry_Trace_Power = Entry(trace_window,width="15")
+        self.Label_Trace_Power_u = Label(trace_window,text="(0-10.0)", anchor=W)
+        
+        def Set_Input_States_Trace():
+            if self.trace_w_laser.get():
+                self.Label_Trace_Power.configure(state="normal")
+                self.Entry_Trace_Power.configure(state="normal")
+                self.Label_Trace_Power_u.configure(state="normal")
+            else:
+                self.Label_Trace_Power.configure(state="disabled")
+                self.Entry_Trace_Power.configure(state="disabled")
+                self.Label_Trace_Power_u.configure(state="disabled")
+
         D_Yloc  = 0
         D_dY = 28
         xd_label_L = 12
@@ -5286,13 +5819,6 @@ class Application(Frame):
         w_units=50
         xd_entry_L=xd_label_L+w_label+10
         xd_units_L=xd_entry_L+w_entry+5
-
-        D_Yloc=D_Yloc+D_dY
-        self.Label_Laser_Trace = Label(trace_window,text="Laser 'On' During Trace")
-        self.Label_Laser_Trace.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
-        self.Checkbutton_Laser_Trace = Checkbutton(trace_window,text="", anchor=W)
-        self.Checkbutton_Laser_Trace.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
-        self.Checkbutton_Laser_Trace.configure(variable=self.trace_w_laser)
 
         D_Yloc=D_Yloc+D_dY
         self.Label_Trace_Gap = Label(trace_window,text="Gap Between Design and Trace")
@@ -5308,6 +5834,28 @@ class Application(Frame):
             self.Label_Trace_Gap.configure(state="disabled")
             self.Label_Trace_Gap_u.configure(state="disabled")
             self.Entry_Trace_Gap.configure(state="disabled")
+
+        D_Yloc=D_Yloc+D_dY
+        self.Label_Laser_Trace = Label(trace_window,text="Laser 'On' During Trace")
+        self.Label_Laser_Trace.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
+        self.Checkbutton_Laser_Trace = Checkbutton(trace_window,text="", anchor=W,  command=Set_Input_States_Trace)
+        self.Checkbutton_Laser_Trace.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
+        self.Checkbutton_Laser_Trace.configure(variable=self.trace_w_laser)
+        Set_Input_States_Trace()
+
+        green = "#%02x%02x%02x" % (0, 200, 0)
+        if self.display_power:
+            D_Yloc=D_Yloc+D_dY
+            self.Label_Trace_Power.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
+            self.Entry_Trace_Power.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
+            self.Label_Trace_Power_u.place(x=xd_units_L, y=D_Yloc, width=w_units, height=21)
+            self.Entry_Trace_Power.configure(textvariable=self.Trace_power,justify='center',fg=green)
+            self.Trace_power.trace_variable("w", self.Entry_Trace_Power_Callback)
+            self.entry_set(self.Entry_Trace_Power,self.Entry_Trace_Power_Check(),2)
+            if not self.trace_w_laser.get():
+                self.Label_Trace_Power.configure(state="disabled")
+                self.Label_Trace_Power_u.configure(state="disabled")
+                self.Entry_Trace_Power.configure(state="disabled")
             
         D_Yloc=D_Yloc+D_dY
         self.Trace_Button = Button(trace_window,text="Trace Boundary With Laser Head",command=Close_and_Send_Click)
@@ -5772,8 +6320,8 @@ root = Tk()
 app = Application(root)
 app.master.title(title_text)
 app.master.iconname("K40")
-app.master.minsize(800,560)
-app.master.geometry("800x560")
+app.master.minsize(800,625)
+app.master.geometry("800x625")
 try:
     try:
         import tkFont
@@ -5842,7 +6390,7 @@ for option, value in opts:
         sys.exit()
     elif option in ('-p','--pi'):
         print("pi mode")
-        app.master.minsize(480,320)
+        app.master.minsize(222,280)
         app.master.geometry("480x320")
     elif option in ('-d','--debug'):
         DEBUG=True
