@@ -431,8 +431,8 @@ class K40_CLASS:
         # power: 0-100%
         ms=int(ms)
         power = int(pct_power * 10)
-        m = power/254
-        n = power%254
+        m = int(power/254)
+        n = int(power%254)
         #pack  = [166,0,65,84,48,m,n,ms,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
         stop_calc=[]
         stop_calc.append(0)
@@ -451,8 +451,8 @@ class K40_CLASS:
     def set_PWM_register(self,pct_power):
         # power: 0-100%
         power = int(pct_power * 10)
-        m = power/254
-        n = power%254
+        m = int(power/254)
+        n = int(power%254)
         pack  = [166,0,65,84,49,m,n,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
         self.send_packet(pack)
         #print(power,m,n)

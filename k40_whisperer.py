@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-version = '0.69'
+version = '0.70'
 title_text = "K40 Whisperer V"+version
 
 import sys
@@ -2044,6 +2044,12 @@ class Application(Frame):
         self.menu_File_save_EGV(operation_type="Raster_Eng-Vector_Eng-Vector_Cut")
 
     def menu_File_save_EGV(self,operation_type=None,default_name="out.EGV"):
+        if self.display_power:
+            msg1 = "Writing EGV file not supported with M3 power settings enabled"
+            self.statusMessage.set(msg1)
+            self.statusbar.configure( bg = 'yellow' )
+            message_box("Information:", msg1)
+            return
         self.stop[0]=False
         if DEBUG:
             start=time()
@@ -4085,17 +4091,15 @@ class Application(Frame):
     def Stop(self,event=None):
         if self.stop[0]==True:
             return
-        line1 = "Sending data to the laser from K40 Whisperer is currently Paused."
-        line2 = "Press \"OK\" to abort any jobs currently running."
-        line3 = "Press \"Cancel\" to resume."
+        
         if self.k40 != None:
             try:
                 self.k40.pause_un_pause()
             except:
-                if message_ask_ok_cancel("Stop Laser Job.", "\n%s\n%s" %(line2,line3)):
-                    self.stop[0]=True
-                
-        if message_ask_ok_cancel("Stop Laser Job.", "%s\n\n%s\n%s" %(line1,line2,line3)):
+                pass
+
+        Cancel_Job = Stop_ResumeDialog(title="Resume or Terminate Laser Job", parent=app)
+        if (Cancel_Job.answer):
             self.stop[0]=True
         else:
             if self.k40 != None:
@@ -6036,7 +6040,43 @@ class UnitsDialog(tkSimpleDialog.Dialog):
         self.result = self.uom.get()
         return 
 
+class Stop_ResumeDialog(tkSimpleDialog.Dialog):
+    def __init__(self, parent, title):
+        self.answer = False
+        tkSimpleDialog.Dialog.__init__(self, parent, title) 
 
+    def body(self, frame):
+        line1 = "\nSending data to the laser from K40 Whisperer is currently Paused."
+        line2 = "Press \"Resume Job\" to resume the laser job currently in progress."
+        line3 = "Press \"Terminate Job\" to abort any jobs currently running..\n"
+        self.my_line1_label = Label(frame, width=60, text=line1)
+        self.my_line1_label.pack()
+        self.my_line2_label = Label(frame, width=60, text=line2)
+        self.my_line2_label.pack()
+        self.my_line3_label = Label(frame, width=60, text=line3)
+        self.my_line3_label.pack()
+        return frame
+
+    def continue_pressed(self):
+        self.answer = False
+        self.destroy()
+
+    def cancel_pressed(self):
+        self.answer = True
+        self.destroy()
+
+    def buttonbox(self):
+        self.ok_button = Button(self, text='Resume Job', width=15, command=self.continue_pressed)
+        self.ok_button.configure(bg='light green')
+        self.ok_button.pack(side="left")
+        self.cancel_button = Button(self, text='Terminate Job', width=15, command=self.cancel_pressed)
+        self.cancel_button.configure(bg='light coral')
+        self.cancel_button.pack(side="right")
+        self.bind("<Return>", lambda event: self.continue_pressed())
+        self.bind("<Escape>", lambda event: self.cancel_pressed())
+
+
+        
 class toplevel_dummy():
     def winfo_exists(self):
         return False
