@@ -2,7 +2,7 @@
 """
     K40 Whisperer
 
-    Copyright (C) <2017-2025>  <Scorch>
+    Copyright (C) <2017-2026>  <Scorch>
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-version = '0.70'
+version = '0.71'
 title_text = "K40 Whisperer V"+version
 
 import sys
@@ -55,24 +55,25 @@ if VERSION == 3:
     from tkinter.filedialog import *
     import tkinter.messagebox
     MAXINT = sys.maxsize
+    def trace_variable(variable, callback):
+        return variable.trace_add("write", callback)
+    def trace_delete(variable,callback):
+        return variable.trace_remove("write",callback)
     
 else:
     from Tkinter import *
     from tkFileDialog import *
     import tkMessageBox
     MAXINT = sys.maxint
+    def trace_variable(variable, callback):
+        return variable.trace_variable("w", callback)
+    def trace_delete(variable,callback):
+        return variable.trace_vdelete("w",callback)
 
 if VERSION < 3 and sys.version_info[1] < 6:
     def next(item):
         #return item.next()
         return item.__next__()
-    
-try:
-    import psyco
-    psyco.full()
-    LOAD_MSG = LOAD_MSG+"\nPsyco Loaded\n"
-except:
-    pass
 
 import math
 from time import time
@@ -530,19 +531,19 @@ class Application(Frame):
         self.Label_Reng_feed_u = Label(self.master,textvariable=self.funits, anchor=W)
         self.Entry_Reng_feed   = Entry(self.master,width="15")
         self.Entry_Reng_feed.configure(textvariable=self.Reng_feed,justify='center',fg="black")
-        self.Reng_feed.trace_variable("w", self.Entry_Reng_feed_Callback)
+        trace_variable(self.Reng_feed, self.Entry_Reng_feed_Callback)
         self.NormalColor =  self.Entry_Reng_feed.cget('bg')
 
         self.Label_Veng_feed_u = Label(self.master,textvariable=self.funits, anchor=W)
         self.Entry_Veng_feed   = Entry(self.master,width="15")
         self.Entry_Veng_feed.configure(textvariable=self.Veng_feed,justify='center',fg="blue")
-        self.Veng_feed.trace_variable("w", self.Entry_Veng_feed_Callback)
+        trace_variable(self.Veng_feed, self.Entry_Veng_feed_Callback)
         self.NormalColor =  self.Entry_Veng_feed.cget('bg')
 
         self.Label_Vcut_feed_u = Label(self.master,textvariable=self.funits, anchor=W)
         self.Entry_Vcut_feed   = Entry(self.master,width="15")
         self.Entry_Vcut_feed.configure(textvariable=self.Vcut_feed,justify='center',fg="red")
-        self.Vcut_feed.trace_variable("w", self.Entry_Vcut_feed_Callback)
+        trace_variable(self.Vcut_feed, self.Entry_Vcut_feed_Callback)
         self.NormalColor =  self.Entry_Vcut_feed.cget('bg')
 
         #Power
@@ -555,22 +556,22 @@ class Application(Frame):
         
         self.Entry_Reng_power   = Entry(self.master,width="15")
         self.Entry_Reng_power.configure(textvariable=self.Reng_power,justify='center',fg="black")
-        self.Reng_power.trace_variable("w", self.Entry_Reng_power_Callback)
+        trace_variable(self.Reng_power, self.Entry_Reng_power_Callback)
         self.NormalColor =  self.Entry_Reng_power.cget('bg')
 
         self.Entry_Veng_power   = Entry(self.master,width="15")
         self.Entry_Veng_power.configure(textvariable=self.Veng_power,justify='center',fg="blue")
-        self.Veng_power.trace_variable("w", self.Entry_Veng_power_Callback)
+        trace_variable(self.Veng_power, self.Entry_Veng_power_Callback)
         self.NormalColor =  self.Entry_Veng_power.cget('bg')
 
         self.Entry_Vcut_power   = Entry(self.master,width="15")
         self.Entry_Vcut_power.configure(textvariable=self.Vcut_power,justify='center',fg="red")
-        self.Vcut_power.trace_variable("w", self.Entry_Vcut_power_Callback)
+        trace_variable(self.Vcut_power, self.Entry_Vcut_power_Callback)
         self.NormalColor =  self.Entry_Vcut_power.cget('bg')
 
         self.Entry_Gcode_power   = Entry(self.master,width="15")
         self.Entry_Gcode_power.configure(textvariable=self.Gcode_power,justify='center',fg="red")
-        self.Gcode_power.trace_variable("w", self.Entry_Gcode_power_Callback)
+        trace_variable(self.Gcode_power, self.Entry_Gcode_power_Callback)
         self.NormalColor =  self.Entry_Gcode_power.cget('bg')
 
 
@@ -580,13 +581,13 @@ class Application(Frame):
         self.Entry_Test_time   = Entry(self.master,width="15")
         self.Entry_Test_time.configure(textvariable=self.test_time,justify='center',fg="black")
 
-        self.test_time.trace_variable("w", self.Entry_Test_time_Callback)
+        trace_variable(self.test_time, self.Entry_Test_time_Callback)
         self.NormalColor =  self.Entry_Test_time.cget('bg')
         
         self.Entry_Test_power   = Entry(self.master,width="15")
         self.Label_Test_power_u = Label(self.master,text="%", anchor=W)
         self.Entry_Test_power.configure(textvariable=self.test_power,justify='center',fg="black")
-        self.test_power.trace_variable("w", self.Entry_Test_power_Callback)
+        trace_variable(self.test_power, self.Entry_Test_power_Callback)
         self.NormalColor =  self.Entry_Test_power.cget('bg')
 
         ##################
@@ -652,17 +653,17 @@ class Application(Frame):
         self.Label_Step_u = Label(self.master,textvariable=self.units, anchor=W)
         self.Entry_Step   = Entry(self.master,width="15")
         self.Entry_Step.configure(textvariable=self.jog_step, justify='center')
-        self.jog_step.trace_variable("w", self.Entry_Step_Callback)
+        trace_variable(self.jog_step, self.Entry_Step_Callback)
 
         ###########################################################################
         self.GoTo_Button    = Button(self.master,text="Move To", command=self.GoTo)
         
         self.Entry_GoToX   = Entry(self.master,width="15",justify='center')
         self.Entry_GoToX.configure(textvariable=self.gotoX)
-        self.gotoX.trace_variable("w", self.Entry_GoToX_Callback)
+        trace_variable(self.gotoX, self.Entry_GoToX_Callback)
         self.Entry_GoToY   = Entry(self.master,width="15",justify='center')
         self.Entry_GoToY.configure(textvariable=self.gotoY)
-        self.gotoY.trace_variable("w", self.Entry_GoToY_Callback)
+        trace_variable(self.gotoY, self.Entry_GoToY_Callback)
         
         self.Label_GoToX   = Label(self.master,text="X", anchor=CENTER )
         self.Label_GoToY   = Label(self.master,text="Y", anchor=CENTER )
@@ -677,36 +678,36 @@ class Application(Frame):
         self.Label_Halftone_adv = Label(self.master,text="Halftone (Dither)")
         self.Checkbutton_Halftone_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Halftone_adv.configure(variable=self.halftone)
-        self.halftone.trace_variable("w", self.View_Refresh_and_Reset_RasterPath) #self.menu_View_Refresh_Callback
+        trace_variable(self.halftone, self.View_Refresh_and_Reset_RasterPath) #self.menu_View_Refresh_Callback
 
         self.Label_Negate_adv = Label(self.master,text="Invert Raster Color")
         self.Checkbutton_Negate_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Negate_adv.configure(variable=self.negate)
-        self.negate.trace_variable("w", self.View_Refresh_and_Reset_RasterPath)
+        trace_variable(self.negate, self.View_Refresh_and_Reset_RasterPath)
 
         self.separator_adv2 = Frame(self.master, height=2, bd=1, relief=SUNKEN)  
 
         self.Label_Mirror_adv = Label(self.master,text="Mirror Design")
         self.Checkbutton_Mirror_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Mirror_adv.configure(variable=self.mirror)
-        self.mirror.trace_variable("w", self.View_Refresh_and_Reset_RasterPath)
+        trace_variable(self.mirror, self.View_Refresh_and_Reset_RasterPath)
 
         self.Label_Rotate_adv = Label(self.master,text="Rotate Design")
         self.Checkbutton_Rotate_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Rotate_adv.configure(variable=self.rotate)
-        self.rotate.trace_variable("w", self.View_Refresh_and_Reset_RasterPath)
+        trace_variable(self.rotate, self.View_Refresh_and_Reset_RasterPath)
 
         self.separator_adv3 = Frame(self.master, height=2, bd=1, relief=SUNKEN)
         
         self.Label_inputCSYS_adv = Label(self.master,text="Use Input CSYS")
         self.Checkbutton_inputCSYS_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_inputCSYS_adv.configure(variable=self.inputCSYS)
-        self.inputCSYS.trace_variable("w", self.menu_View_inputCSYS_Refresh_Callback)
+        trace_variable(self.inputCSYS, self.menu_View_inputCSYS_Refresh_Callback)
 
         self.Label_Inside_First_adv = Label(self.master,text="Cut Inside First")
         self.Checkbutton_Inside_First_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Inside_First_adv.configure(variable=self.inside_first)
-        self.inside_first.trace_variable("w", self.menu_Inside_First_Callback)
+        trace_variable(self.inside_first, self.menu_Inside_First_Callback)
 
         self.Label_Inside_First_adv = Label(self.master,text="Cut Inside First")
         self.Checkbutton_Inside_First_adv = Checkbutton(self.master,text=" ", anchor=W)
@@ -715,7 +716,7 @@ class Application(Frame):
         self.Label_Rotary_Enable_adv = Label(self.master,text="Use Rotary Settings")
         self.Checkbutton_Rotary_Enable_adv = Checkbutton(self.master,text="")
         self.Checkbutton_Rotary_Enable_adv.configure(variable=self.rotary)
-        self.rotary.trace_variable("w", self.Reset_RasterPath_and_Update_Time)
+        trace_variable(self.rotary, self.Reset_RasterPath_and_Update_Time)
 
 
         #####
@@ -724,36 +725,36 @@ class Application(Frame):
         self.Label_Comb_Engrave_adv = Label(self.master,text="Group Engrave Tasks")
         self.Checkbutton_Comb_Engrave_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Comb_Engrave_adv.configure(variable=self.comb_engrave)
-        self.comb_engrave.trace_variable("w", self.menu_View_Refresh_Callback)
+        trace_variable(self.comb_engrave, self.menu_View_Refresh_Callback)
 
         self.Label_Comb_Vector_adv = Label(self.master,text="Group Vector Tasks")
         self.Checkbutton_Comb_Vector_adv = Checkbutton(self.master,text=" ", anchor=W)
         self.Checkbutton_Comb_Vector_adv.configure(variable=self.comb_vector)
-        self.comb_vector.trace_variable("w", self.menu_View_Refresh_Callback) 
+        trace_variable(self.comb_vector, self.menu_View_Refresh_Callback) 
         #####
         
         self.Label_Reng_passes = Label(self.master,text="Raster Eng. Passes")
         self.Entry_Reng_passes   = Entry(self.master,width="15")
         self.Entry_Reng_passes.configure(textvariable=self.Reng_passes,justify='center',fg="black")
-        self.Reng_passes.trace_variable("w", self.Entry_Reng_passes_Callback)
+        trace_variable(self.Reng_passes, self.Entry_Reng_passes_Callback)
         self.NormalColor =  self.Entry_Reng_passes.cget('bg')
 
         self.Label_Veng_passes = Label(self.master,text="Vector Eng. Passes")
         self.Entry_Veng_passes   = Entry(self.master,width="15")
         self.Entry_Veng_passes.configure(textvariable=self.Veng_passes,justify='center',fg="blue")
-        self.Veng_passes.trace_variable("w", self.Entry_Veng_passes_Callback)
+        trace_variable(self.Veng_passes, self.Entry_Veng_passes_Callback)
         self.NormalColor =  self.Entry_Veng_passes.cget('bg')
 
         self.Label_Vcut_passes = Label(self.master,text="Vector Cut Passes")
         self.Entry_Vcut_passes   = Entry(self.master,width="15")
         self.Entry_Vcut_passes.configure(textvariable=self.Vcut_passes,justify='center',fg="red")
-        self.Vcut_passes.trace_variable("w", self.Entry_Vcut_passes_Callback)
+        trace_variable(self.Vcut_passes, self.Entry_Vcut_passes_Callback)
         self.NormalColor =  self.Entry_Vcut_passes.cget('bg')
 
         self.Label_Gcde_passes = Label(self.master,text="G-Code Passes")
         self.Entry_Gcde_passes   = Entry(self.master,width="15")
         self.Entry_Gcde_passes.configure(textvariable=self.Gcde_passes,justify='center',fg="black")
-        self.Gcde_passes.trace_variable("w", self.Entry_Gcde_passes_Callback)
+        trace_variable(self.Gcde_passes, self.Entry_Gcde_passes_Callback)
         self.NormalColor =  self.Entry_Gcde_passes.cget('bg')
 
         
@@ -5320,7 +5321,7 @@ class Application(Frame):
         self.Checkbutton_Reduce_Memory = Checkbutton(gen_settings,text="(needed for large designs or low memory computers)", anchor=W)
         self.Checkbutton_Reduce_Memory.place(x=xd_entry_L, y=D_Yloc, width=350, height=23)
         self.Checkbutton_Reduce_Memory.configure(variable=self.reduced_mem)
-        self.reduced_mem.trace_variable("w", self.Reduced_Memory_Callback)
+        trace_variable(self.reduced_mem, self.Reduced_Memory_Callback)
 
         D_Yloc=D_Yloc+D_dY
         self.Label_Wait = Label(gen_settings,text="Wait for Laser to Finish")
@@ -5328,7 +5329,7 @@ class Application(Frame):
         self.Checkbutton_Wait = Checkbutton(gen_settings,text="(after all data has been sent over USB)", anchor=W)
         self.Checkbutton_Wait.place(x=xd_entry_L, y=D_Yloc, width=350, height=23)
         self.Checkbutton_Wait.configure(variable=self.wait)
-        #self.wait.trace_variable("w", self.Wait_Callback)
+        #trace_variable(self.wait, self.Wait_Callback)
         
         #D_Yloc=D_Yloc+D_dY
         #self.Label_Timeout = Label(gen_settings,text="USB Timeout")
@@ -5338,7 +5339,7 @@ class Application(Frame):
         #self.Entry_Timeout = Entry(gen_settings,width="15")
         #self.Entry_Timeout.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         #self.Entry_Timeout.configure(textvariable=self.t_timeout)
-        #self.t_timeout.trace_variable("w", self.Entry_Timeout_Callback)
+        #trace_variable(self.t_timeout, self.Entry_Timeout_Callback)
         #self.entry_set(self.Entry_Timeout,self.Entry_Timeout_Check(),2)
 
         #D_Yloc=D_Yloc+D_dY
@@ -5347,7 +5348,7 @@ class Application(Frame):
         #self.Entry_N_Timeouts = Entry(gen_settings,width="15")
         #self.Entry_N_Timeouts.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         #self.Entry_N_Timeouts.configure(textvariable=self.n_timeouts)
-        #self.n_timeouts.trace_variable("w", self.Entry_N_Timeouts_Callback)
+        #trace_variable(self.n_timeouts, self.Entry_N_Timeouts_Callback)
         #self.entry_set(self.Entry_N_Timeouts,self.Entry_N_Timeouts_Check(),2)
 
         D_Yloc=D_Yloc+D_dY*1.25
@@ -5378,7 +5379,7 @@ class Application(Frame):
         self.Entry_Ink_Timeout = Entry(gen_settings,width="15")
         self.Entry_Ink_Timeout.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Ink_Timeout.configure(textvariable=self.ink_timeout)
-        self.ink_timeout.trace_variable("w", self.Entry_Ink_Timeout_Callback)
+        trace_variable(self.ink_timeout, self.Entry_Ink_Timeout_Callback)
         self.entry_set(self.Entry_Ink_Timeout,self.Entry_Ink_Timeout_Check(),2)
 
         D_Yloc=D_Yloc+D_dY*1.25
@@ -5395,7 +5396,7 @@ class Application(Frame):
         self.Checkbuttonshow_power = Checkbutton(gen_settings,text="", anchor=W)
         self.Checkbuttonshow_power.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
         self.Checkbuttonshow_power.configure(variable=self.show_power)
-        self.show_power.trace_variable("w",self.menu_View_Refresh_Callback)
+        trace_variable(self.show_power, self.menu_View_Refresh_Callback)
 
         D_Yloc=D_Yloc+D_dY
         self.Labelshow_test = Label(gen_settings,text="Show Test Fire Button")
@@ -5403,7 +5404,7 @@ class Application(Frame):
         self.Checkbuttonshow_test = Checkbutton(gen_settings,text="", anchor=W)
         self.Checkbuttonshow_test.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
         self.Checkbuttonshow_test.configure(variable=self.show_test)
-        self.show_test.trace_variable("w",self.menu_View_Refresh_Callback)
+        trace_variable(self.show_test, self.menu_View_Refresh_Callback)
         
         D_Yloc=D_Yloc+D_dY
         self.Label_Max_Power = Label(gen_settings,text="Maximum Power Setting")
@@ -5415,7 +5416,7 @@ class Application(Frame):
         self.Entry_Max_Power = Entry(gen_settings,width="15")
         self.Entry_Max_Power.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Max_Power.configure(textvariable=self.max_power,justify='center')
-        self.max_power.trace_variable("w", self.Entry_Max_Power_Callback)
+        trace_variable(self.max_power, self.Entry_Max_Power_Callback)
         self.entry_set(self.Entry_Max_Power,self.Entry_Max_Power_Check(),2)
 
         def update_gen_settings(input1=None,input2=None,input3=None):
@@ -5451,7 +5452,7 @@ class Application(Frame):
         self.Checkbutton_no_com = Checkbutton(gen_settings,text="", anchor=W)
         self.Checkbutton_no_com.place(x=xd_entry_L, y=D_Yloc, width=75, height=23)
         self.Checkbutton_no_com.configure(variable=self.HomeUR)
-        self.HomeUR.trace_variable("w",self.menu_View_Refresh_Callback)
+        trace_variable(self.HomeUR, self.menu_View_Refresh_Callback)
 
         D_Yloc=D_Yloc+D_dY 
         self.Label_Board_Name      = Label(gen_settings,text="Board Name", anchor=CENTER )
@@ -5464,7 +5465,7 @@ class Application(Frame):
                                             "LASER-B1",
                                             "LASER-B",
                                             "LASER-A")
-        self.board_name.trace_variable("w",update_gen_settings)
+        trace_variable(self.board_name, update_gen_settings)
         
         self.Label_Board_Name.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
         self.Board_Name_OptionMenu.place(x=xd_entry_L, y=D_Yloc, width=w_entry*3, height=23)
@@ -5477,7 +5478,7 @@ class Application(Frame):
         self.Entry_Laser_Area_Width = Entry(gen_settings,width="15")
         self.Entry_Laser_Area_Width.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_Area_Width.configure(textvariable=self.LaserXsize)
-        self.LaserXsize.trace_variable("w", self.Entry_Laser_Area_Width_Callback)
+        trace_variable(self.LaserXsize, self.Entry_Laser_Area_Width_Callback)
         self.entry_set(self.Entry_Laser_Area_Width,self.Entry_Laser_Area_Width_Check(),2)
 
         D_Yloc=D_Yloc+D_dY
@@ -5488,7 +5489,7 @@ class Application(Frame):
         self.Entry_Laser_Area_Height = Entry(gen_settings,width="15")
         self.Entry_Laser_Area_Height.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_Area_Height.configure(textvariable=self.LaserYsize)
-        self.LaserYsize.trace_variable("w", self.Entry_Laser_Area_Height_Callback)
+        trace_variable(self.LaserYsize, self.Entry_Laser_Area_Height_Callback)
         self.entry_set(self.Entry_Laser_Area_Height,self.Entry_Laser_Area_Height_Check(),2)
 
         D_Yloc=D_Yloc+D_dY
@@ -5497,7 +5498,7 @@ class Application(Frame):
         self.Entry_Laser_X_Scale = Entry(gen_settings,width="15")
         self.Entry_Laser_X_Scale.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_X_Scale.configure(textvariable=self.LaserXscale)
-        self.LaserXscale.trace_variable("w", self.Entry_Laser_X_Scale_Callback)
+        trace_variable(self.LaserXscale, self.Entry_Laser_X_Scale_Callback)
         self.entry_set(self.Entry_Laser_X_Scale,self.Entry_Laser_X_Scale_Check(),2)
 
         D_Yloc=D_Yloc+D_dY
@@ -5506,7 +5507,7 @@ class Application(Frame):
         self.Entry_Laser_Y_Scale = Entry(gen_settings,width="15")
         self.Entry_Laser_Y_Scale.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_Y_Scale.configure(textvariable=self.LaserYscale)
-        self.LaserYscale.trace_variable("w", self.Entry_Laser_Y_Scale_Callback)
+        trace_variable(self.LaserYscale, self.Entry_Laser_Y_Scale_Callback)
         self.entry_set(self.Entry_Laser_Y_Scale,self.Entry_Laser_Y_Scale_Check(),2)
                 
         D_Yloc=D_Yloc+D_dY+10
@@ -5559,7 +5560,7 @@ class Application(Frame):
         self.Entry_Rstep   = Entry(raster_settings,width="15")
         self.Entry_Rstep.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Rstep.configure(textvariable=self.rast_step)
-        self.rast_step.trace_variable("w", self.Entry_Rstep_Callback)
+        trace_variable(self.rast_step, self.Entry_Rstep_Callback)
 
         D_Yloc=D_Yloc+D_dY
         self.Label_EngraveUP = Label(raster_settings,text="Engrave Bottom Up")
@@ -5574,7 +5575,7 @@ class Application(Frame):
         self.Checkbutton_Halftone = Checkbutton(raster_settings,text=" ", anchor=W, command=self.Set_Input_States_RASTER)
         self.Checkbutton_Halftone.place(x=w_label+22, y=D_Yloc, width=75, height=23)
         self.Checkbutton_Halftone.configure(variable=self.halftone)
-        self.halftone.trace_variable("w", self.menu_View_Refresh_Callback)
+        trace_variable(self.halftone, self.menu_View_Refresh_Callback)
 
         ############
         D_Yloc=D_Yloc+D_dY 
@@ -5617,7 +5618,7 @@ class Application(Frame):
         self.bezier_M1_Slider.place(x=xd_entry_L, y=D_Yloc, width=(Wset-xd_entry_L-25-280 ))
         D_Yloc=D_Yloc+21
         self.Label_bezier_M1.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
-        self.bezier_M1.trace_variable("w", self.bezier_M1_Callback)
+        trace_variable(self.bezier_M1, self.bezier_M1_Callback)
         
         D_Yloc=D_Yloc+D_dY-8
         self.Label_bezier_M2  = Label(raster_settings,
@@ -5628,7 +5629,7 @@ class Application(Frame):
         self.bezier_M2_Slider.place(x=xd_entry_L, y=D_Yloc, width=(Wset-xd_entry_L-25-280 ))
         D_Yloc=D_Yloc+21
         self.Label_bezier_M2.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
-        self.bezier_M2.trace_variable("w", self.bezier_M2_Callback)
+        trace_variable(self.bezier_M2, self.bezier_M2_Callback)
 
         D_Yloc=D_Yloc+D_dY-8
         self.Label_bezier_weight   = Label(raster_settings,
@@ -5639,7 +5640,7 @@ class Application(Frame):
         self.bezier_weight_Slider.place(x=xd_entry_L, y=D_Yloc, width=(Wset-xd_entry_L-25-280 ))
         D_Yloc=D_Yloc+21
         self.Label_bezier_weight.place(x=xd_label_L, y=D_Yloc, width=w_label, height=21)
-        self.bezier_weight.trace_variable("w", self.bezier_weight_Callback)
+        trace_variable(self.bezier_weight, self.bezier_weight_Callback)
 
 ##        show_unsharp = False
 ##        if DEBUG and show_unsharp:
@@ -5649,7 +5650,7 @@ class Application(Frame):
 ##            self.Checkbutton_UnsharpMask = Checkbutton(raster_settings,text=" ", anchor=W, command=self.Set_Input_States_Unsharp)
 ##            self.Checkbutton_UnsharpMask.place(x=w_label+22, y=D_Yloc, width=75, height=23)
 ##            self.Checkbutton_UnsharpMask.configure(variable=self.unsharp_flag)
-##            self.unsharp_flag.trace_variable("w", self.menu_View_Refresh_Callback)
+##            trace_variable(self.unsharp_flag, self.menu_View_Refresh_Callback)
 ##
 ##            D_Yloc=D_Yloc+D_dY
 ##            self.Label_Unsharp_Radius   = Label(raster_settings,text="Unsharp Mask Radius", anchor=CENTER )
@@ -5659,7 +5660,7 @@ class Application(Frame):
 ##            self.Entry_Unsharp_Radius   = Entry(raster_settings,width="15")
 ##            self.Entry_Unsharp_Radius.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
 ##            self.Entry_Unsharp_Radius.configure(textvariable=self.unsharp_r)
-##            self.unsharp_r.trace_variable("w", self.Entry_Unsharp_Radius_Callback)
+##            trace_variable(self.unsharp_r, self.Entry_Unsharp_Radius_Callback)
 ##
 ##            D_Yloc=D_Yloc+D_dY
 ##            self.Label_Unsharp_Percent   = Label(raster_settings,text="Unsharp Mask Percent", anchor=CENTER )
@@ -5669,7 +5670,7 @@ class Application(Frame):
 ##            self.Entry_Unsharp_Percent   = Entry(raster_settings,width="15")
 ##            self.Entry_Unsharp_Percent.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
 ##            self.Entry_Unsharp_Percent.configure(textvariable=self.unsharp_p)
-##            self.unsharp_p.trace_variable("w", self.Entry_Unsharp_Percent_Callback)
+##            trace_variable(self.unsharp_p, self.Entry_Unsharp_Percent_Callback)
 ##
 ##            D_Yloc=D_Yloc+D_dY
 ##            self.Label_Unsharp_Threshold   = Label(raster_settings,text="Unsharp Mask Threshold", anchor=CENTER )
@@ -5679,7 +5680,7 @@ class Application(Frame):
 ##            self.Entry_Unsharp_Threshold   = Entry(raster_settings,width="15")
 ##            self.Entry_Unsharp_Threshold.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
 ##            self.Entry_Unsharp_Threshold.configure(textvariable=self.unsharp_t)
-##            self.unsharp_t.trace_variable("w", self.Entry_Unsharp_Threshold_Callback)        
+##            trace_variable(self.unsharp_t, self.Entry_Unsharp_Threshold_Callback)        
 
         # Bezier Canvas
         self.Bezier_frame = Frame(raster_settings, bd=1, relief=SUNKEN)
@@ -5750,7 +5751,7 @@ class Application(Frame):
         self.Entry_Laser_R_Scale = Entry(rotary_settings,width="15")
         self.Entry_Laser_R_Scale.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_R_Scale.configure(textvariable=self.LaserRscale)
-        self.LaserRscale.trace_variable("w", self.Entry_Laser_R_Scale_Callback)
+        trace_variable(self.LaserRscale, self.Entry_Laser_R_Scale_Callback)
         self.entry_set(self.Entry_Laser_R_Scale,self.Entry_Laser_R_Scale_Check(),2)
 
         D_Yloc=D_Yloc+D_dY
@@ -5761,7 +5762,7 @@ class Application(Frame):
         self.Entry_Laser_Rapid_Feed = Entry(rotary_settings,width="15")
         self.Entry_Laser_Rapid_Feed.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_Laser_Rapid_Feed.configure(textvariable=self.rapid_feed)
-        self.rapid_feed.trace_variable("w", self.Entry_Laser_Rapid_Feed_Callback)
+        trace_variable(self.rapid_feed, self.Entry_Laser_Rapid_Feed_Callback)
         self.entry_set(self.Entry_Laser_Rapid_Feed,self.Entry_Laser_Rapid_Feed_Check(),2)
         
         ## Buttons ##
@@ -5832,7 +5833,7 @@ class Application(Frame):
         self.Label_Trace_Gap_u = Label(trace_window,textvariable=self.units, anchor=W)
         self.Label_Trace_Gap_u.place(x=xd_units_L, y=D_Yloc, width=w_units, height=21)
         self.Entry_Trace_Gap.configure(textvariable=self.trace_gap,justify='center')
-        self.trace_gap.trace_variable("w", self.Entry_Trace_Gap_Callback)
+        trace_variable(self.trace_gap, self.Entry_Trace_Gap_Callback)
         self.entry_set(self.Entry_Trace_Gap,self.Entry_Trace_Gap_Check(),2)
         if not PYCLIPPER:
             self.Label_Trace_Gap.configure(state="disabled")
@@ -5854,7 +5855,7 @@ class Application(Frame):
             self.Entry_Trace_Power.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
             self.Label_Trace_Power_u.place(x=xd_units_L, y=D_Yloc, width=w_units, height=21)
             self.Entry_Trace_Power.configure(textvariable=self.Trace_power,justify='center',fg=green)
-            self.Trace_power.trace_variable("w", self.Entry_Trace_Power_Callback)
+            trace_variable(self.Trace_power, self.Entry_Trace_Power_Callback)
             self.entry_set(self.Entry_Trace_Power,self.Entry_Trace_Power_Check(),2)
             if not self.trace_w_laser.get():
                 self.Label_Trace_Power.configure(state="disabled")
@@ -5869,7 +5870,7 @@ class Application(Frame):
         self.Entry_Trace_Speed.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         green = "#%02x%02x%02x" % (0, 200, 0)
         self.Entry_Trace_Speed.configure(textvariable=self.trace_speed,justify='center',fg=green)
-        self.trace_speed.trace_variable("w", self.Entry_Trace_Speed_Callback)
+        trace_variable(self.trace_speed, self.Entry_Trace_Speed_Callback)
         self.entry_set(self.Entry_Trace_Speed,self.Entry_Trace_Speed_Check(),2)
         self.Label_Trace_Speed_u = Label(trace_window,textvariable=self.funits, anchor=W)
         self.Label_Trace_Speed_u.place(x=xd_units_L, y=D_Yloc, width=w_units, height=21)
@@ -5918,7 +5919,7 @@ class Application(Frame):
         self.Entry_N_EGV_Passes = Entry(egv_send,width="15")
         self.Entry_N_EGV_Passes.place(x=xd_entry_L, y=D_Yloc, width=w_entry, height=23)
         self.Entry_N_EGV_Passes.configure(textvariable=self.n_egv_passes)
-        self.n_egv_passes.trace_variable("w", self.Entry_N_EGV_Passes_Callback)
+        trace_variable(self.n_egv_passes, self.Entry_N_EGV_Passes_Callback)
         self.entry_set(self.Entry_N_EGV_Passes,self.Entry_N_EGV_Passes_Check(),2)
 
         D_Yloc=D_Yloc+D_dY
@@ -6240,10 +6241,11 @@ class pxpiDialog(tkSimpleDialog.Dialog):
         ###########################################################################
                     
         def Set_Value(other=None,width=None,height=None):
-            self.svg_pxpi.trace_vdelete("w",self.trace_id_svg_pxpi)
-            self.other.trace_vdelete("w",self.trace_id_pxpi)
-            self.svg_width.trace_vdelete("w",self.trace_id_width)
-            self.svg_height.trace_vdelete("w",self.trace_id_height)
+            trace_delete(self.svg_pxpi   ,self.trace_id_svg_pxpi)
+            trace_delete(self.other      ,self.trace_id_pxpi)
+            trace_delete(self.svg_width  ,self.trace_id_width)
+            trace_delete(self.svg_height ,self.trace_id_height)
+            
             self.update_idletasks()
             
             if other != None:
@@ -6253,10 +6255,10 @@ class pxpiDialog(tkSimpleDialog.Dialog):
             if height != None:
                 self.svg_height.set("%f" %(height))
             
-            self.trace_id_svg_pxpi = self.svg_pxpi.trace_variable("w", SVG_pxpi_callback)
-            self.trace_id_pxpi     = self.other.trace_variable("w", Entry_custom_Callback)
-            self.trace_id_width   = self.svg_width.trace_variable("w", Entry_Width_Callback)
-            self.trace_id_height  = self.svg_height.trace_variable("w", Entry_Height_Callback)
+            self.trace_id_svg_pxpi = trace_variable(self.svg_pxpi  , SVG_pxpi_callback)
+            self.trace_id_pxpi     = trace_variable(self.other     , Entry_custom_Callback)
+            self.trace_id_width    = trace_variable(self.svg_width , Entry_Width_Callback)
+            self.trace_id_height   = trace_variable(self.svg_height, Entry_Height_Callback)
             self.update_idletasks()
             
         ###########################################################################
@@ -6283,19 +6285,19 @@ class pxpiDialog(tkSimpleDialog.Dialog):
         Entry_Custom_pxpi   = Entry(master,width="10")
         Entry_Custom_pxpi.configure(textvariable=self.other)
         Label_pxpi_units =  Label(master,text="units/in", anchor=W)
-        self.trace_id_pxpi = self.other.trace_variable("w", Entry_custom_Callback)
+        self.trace_id_pxpi = trace_variable(self.other, Entry_custom_Callback)
 
         Label_Width =  Label(master,text="Width", anchor=W)
         Entry_Custom_Width   = Entry(master,width="10")
         Entry_Custom_Width.configure(textvariable=self.svg_width)
         Label_Width_units =  Label(master,textvariable=self.svg_units, anchor=W)
-        self.trace_id_width = self.svg_width.trace_variable("w", Entry_Width_Callback)
+        self.trace_id_width = trace_variable(self.svg_width, Entry_Width_Callback)
 
         Label_Height =  Label(master,text="Height", anchor=W)
         Entry_Custom_Height   = Entry(master,width="10")
         Entry_Custom_Height.configure(textvariable=self.svg_height)
         Label_Height_units =  Label(master,textvariable=self.svg_units, anchor=W)
-        self.trace_id_height = self.svg_height.trace_variable("w", Entry_Height_Callback)
+        self.trace_id_height = trace_variable(self.svg_height, Entry_Height_Callback)
 
         if self.fixed_size == True:
              Entry_Custom_Width.configure(state="disabled")
@@ -6341,7 +6343,7 @@ class pxpiDialog(tkSimpleDialog.Dialog):
         Radio_SVG_pxpi_90.configure  (variable=self.svg_pxpi)
         Radio_SVG_pxpi_72.configure  (variable=self.svg_pxpi)
         Radio_Res_Custom.configure  (variable=self.svg_pxpi)
-        self.trace_id_svg_pxpi = self.svg_pxpi.trace_variable("w", SVG_pxpi_callback)
+        self.trace_id_svg_pxpi = trace_variable(self.svg_pxpi, SVG_pxpi_callback)
         ###########################################################################
     
     def apply(self):
