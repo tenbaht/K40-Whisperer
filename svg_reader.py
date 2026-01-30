@@ -1,6 +1,6 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 '''
-Copyright (C) 2017-2020 Scorch www.scorchworks.com
+Copyright (C) 2017-2021 Scorch www.scorchworks.com
 Derived from dxf_outlines.py by Aaron Spike and Alvin Penner
 
 This program is free software; you can redistribute it and/or modify
@@ -50,12 +50,12 @@ def run_external(cmd, timeout_sec):
     stderr=None
     FLAG=[True]
     try:
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        proc = Popen(cmd, shell=False, stdout=PIPE, stderr=PIPE, stdin=PIPE, startupinfo=None)
     except Exception as e:
         raise Exception("\n%s\n\nExecutable Path:\n%s" %(e,cmd[0]))
     if timeout_sec > 0:
         kill_proc = lambda p: kill_sub_process(p,timeout_sec, FLAG)
-    
+
         timer = Timer(timeout_sec, kill_proc, [proc])
         try:
             timer.start()
@@ -65,7 +65,7 @@ def run_external(cmd, timeout_sec):
         if not FLAG[0]:
             raise Exception("\nInkscape sub-process terminated after %d seconds." %(timeout_sec))
         return (stdout,stderr)
-        
+
 def kill_sub_process(p,timeout_sec, FLAG):
     FLAG[0]=False
     p.kill()
@@ -88,7 +88,7 @@ class SVG_PXPI_EXCEPTION(Exception):
         self.value = value
     def __str__(self):
         return repr(self.value)
-    
+
 class CSS_value_class():
     def __init__(self,type_name,value):
         type_name_list = type_name.split('.')
@@ -155,10 +155,10 @@ class SVG_READER(inkex.Effect):
         self.cut_lines = []
         self.eng_lines = []
         self.id_cnt = 0
-        
+
         self.png_area = "--export-area-page"
-        self.timout = 180 #timeout time for external calls to Inkscape in seconds 
-              
+        self.timout = 180 #timeout time for external calls to Inkscape in seconds
+
         self.layers = ['0']
         self.layer = '0'
         self.layernames = []
@@ -168,13 +168,14 @@ class SVG_READER(inkex.Effect):
     def parse_svg(self,filename):
         try:
             self.parse(filename)
+            #self.parse(filename, encoding='utf-8')
         except Exception as e:
             exception_msg = "%s" %(e)
             if exception_msg.find("encoding"):
                 self.parse(filename,encoding="ISO-8859-1")
             else:
                 raise Exception(e)
-        
+
     def set_inkscape_path(self,PATH):
         if PATH!=None:
             self.inkscape_exe_list.insert(0,PATH)
@@ -182,7 +183,7 @@ class SVG_READER(inkex.Effect):
             if ( os.path.isfile( location ) ):
                 self.inkscape_exe=location
                 break
-        
+
     def colmod(self,r,g,b,path_id):
         changed=False
         k40_action = 'raster'
@@ -205,7 +206,7 @@ class SVG_READER(inkex.Effect):
             changed=False
         color_out = '#%02x%02x%02x' %(r,g,b)
         return (color_out, changed, k40_action)
-        
+
 
     def process_shape(self, node, mat, group_stroke = None):
         #################################
@@ -217,7 +218,7 @@ class SVG_READER(inkex.Effect):
                 tag_type = node.tag[i+1:]
         except:
             tag_type=""
-        
+
         ##############################################
         ### Set a unique identifier for each shape ###
         ##############################################
@@ -236,8 +237,8 @@ class SVG_READER(inkex.Effect):
                     css_data = self.CSS_values.get_css_value(tag_type,cv)+";"+css_data
                 else:
                     css_data = self.CSS_values.get_css_value(tag_type,cv)
-                
-            # Remove the reference to the CSS data 
+
+            # Remove the reference to the CSS data
             del node.attrib['class']
 
             # Check if a style entry already exists. If it does
@@ -267,7 +268,7 @@ class SVG_READER(inkex.Effect):
             stroke_outside = group_stroke
         if stroke_outside:
             stroke_width_outside = node.get('stroke-width')
-            
+
             col = stroke_outside
             col= col.strip()
             if simplestyle.isColor(col):
@@ -302,7 +303,7 @@ class SVG_READER(inkex.Effect):
         if style:
             declarations = style.split(';')
             i_sw = -1
-            
+
             sw_prop = 'stroke-width'
             for i,decl in enumerate(declarations):
                 parts = decl.split(':', 2)
@@ -313,11 +314,11 @@ class SVG_READER(inkex.Effect):
                     if prop == 'display' and col == "none":
                         # display is 'none' return without processing group
                         return
-                    
+
                     if prop == 'k40_action':
                         changed = True
                         self.Cut_Type[path_id]=col
-                        
+
                     #if prop in color_props:
                     if prop == sw_prop:
                         i_sw = i
@@ -337,7 +338,16 @@ class SVG_READER(inkex.Effect):
                     if (self.txt2paths==False):
                         raise SVG_TEXT_EXCEPTION(text_message_warning)
                     else:
-                        raise Exception(text_message_fatal)
+                        # Check if there is actually any text
+                        text_length = 0
+                        text_length = text_length + len(self.strip_text(node.tail))
+                        text_length = text_length + len(self.strip_text(node.text))
+                        for child in node:
+                            text_length = text_length + len(self.strip_text(child.tail))
+                            text_length = text_length + len(self.strip_text(child.text))
+                        #print("text_length",text_length)
+                        if (text_length!=0):
+                            raise Exception(text_message_fatal)
 
                 if i_sw != -1:
                     declarations[i_sw] = sw_prop + ':' + "0.0"
@@ -364,7 +374,7 @@ class SVG_READER(inkex.Effect):
                     x=float(node.get('x'))
                 if node.get('y'):
                     y=float(node.get('y'))
-                
+
                 width = float(node.get('width'))
                 height = float(node.get('height'))
                 rx = 0.0
@@ -373,7 +383,7 @@ class SVG_READER(inkex.Effect):
                     rx=float(node.get('rx'))
                 if node.get('ry'):
                     ry=float(node.get('ry'))
-                    
+
                 if max(rx,ry) > 0.0:
                     if rx==0.0 or ry==0.0:
                         rx = max(rx,ry)
@@ -390,11 +400,11 @@ class SVG_READER(inkex.Effect):
                     C3 = "A %f,%f 0 0 1 %f,%f" %(rx         , ry         , x          , y+height-ry)
                     L4 = "M %f,%f %f,%f "      %(x          , y+height-ry, x          , y+ry       )
                     C4 = "A %f,%f 0 0 1 %f,%f" %(rx         , ry         , x+rx       , y          )
-                    d =  L1 + C1 + L2 + C2 + L3 + C3 + L4 + C4    
+                    d =  L1 + C1 + L2 + C2 + L3 + C3 + L4 + C4
                 else:
-                    d = "M %f,%f %f,%f %f,%f %f,%f Z" %(x,y, x+width,y,  x+width,y+height, x,y+height) 
+                    d = "M %f,%f %f,%f %f,%f %f,%f Z" %(x,y, x+width,y,  x+width,y+height, x,y+height)
                 p = cubicsuperpath.parsePath(d)
-                
+
             elif node.tag == inkex.addNS('circle','svg'):
                 cx = 0.0
                 cy = 0.0
@@ -412,7 +422,7 @@ class SVG_READER(inkex.Effect):
                     else:
                         raise Exception("Radius of SVG circle is not defined.")
                 p = cubicsuperpath.parsePath(d)
-            
+
             elif node.tag == inkex.addNS('ellipse','svg'):
                 cx = 0.0
                 cy = 0.0
@@ -428,19 +438,19 @@ class SVG_READER(inkex.Effect):
                     rx = float(node.get('rx'))
                 if node.get('ry'):
                     ry = float(node.get('ry'))
-                    
+
                 d  = "M %f,%f A   %f,%f 0 0 1 %f,%f   %f,%f 0 0 1 %f,%f   %f,%f 0 0 1 %f,%f   %f,%f 0 0 1 %f,%f Z" %(cx+rx,cy, rx,ry,cx,cy+ry,  rx,ry,cx-rx,cy,  rx,ry,cx,cy-ry, rx,ry,cx+rx,cy)
                 p = cubicsuperpath.parsePath(d)
-                
+
             elif (node.tag == inkex.addNS('polygon','svg')) or (node.tag == inkex.addNS('polyline','svg')):
                 points = node.get('points')
                 if not points:
                     return
-               
+
                 points = points.replace(',', ' ')
                 while points.find('  ') > -1:
                     points = points.replace('  ', ' ')
-                    
+
                 points = points.strip().split(" ")
                 d = "M "
                 for i in range(0,len(points),2):
@@ -454,23 +464,23 @@ class SVG_READER(inkex.Effect):
                 p = cubicsuperpath.parsePath(d)
 
             elif node.tag == inkex.addNS('line','svg'):
-                x1 = float(node.get('x1')) 
+                x1 = float(node.get('x1'))
                 y1 = float(node.get('y1'))
                 x2 = float(node.get('x2'))
                 y2 = float(node.get('y2'))
                 d = "M "
                 d = "M %f,%f %f,%f" %(x1,y1,x2,y2)
-                p = cubicsuperpath.parsePath(d)          
+                p = cubicsuperpath.parsePath(d)
             else:
                 #print("something was ignored")
                 #print(node.tag)
                 return
-            
+
             trans = node.get('transform')
             if trans:
                 mat = simpletransform.composeTransform(mat, simpletransform.parseTransform(trans))
             simpletransform.applyTransformToPath(mat, p)
-            
+
             ##########################################
             ## Break Curves down into small lines  ###
             ##########################################
@@ -499,8 +509,8 @@ class SVG_READER(inkex.Effect):
         #####################################################
         ### End of saving the vector path data            ###
         #####################################################
-                
-        
+
+
     def process_clone(self, node):
         trans = node.get('transform')
         x = node.get('x')
@@ -538,7 +548,7 @@ class SVG_READER(inkex.Effect):
         if group.get('display')=='none':
             return
         ##############################################
-        ### Handle 'style' data                  
+        ### Handle 'style' data
         style = group.get('style')
         if style:
             declarations = style.split(';')
@@ -557,12 +567,12 @@ class SVG_READER(inkex.Effect):
             style = group.get('style')
             if style:
                 style = simplestyle.parseStyle(style)
-                if 'display' in style:   
+                if 'display' in style:
                     if style['display'] == 'none':
                         #layer display is 'none' return without processing layer
                         return
             layer = group.get(inkex.addNS('label', 'inkscape'))
-            
+
             layer = layer.replace(' ', '_')
             if layer in self.layers:
                 self.layer = layer
@@ -579,7 +589,7 @@ class SVG_READER(inkex.Effect):
             elif node.tag == inkex.addNS('style', 'svg'):
                 if node.get('type')=="text/css":
                     self.parse_css(node.text)
-                
+
             elif node.tag == inkex.addNS('defs', 'svg'):
                 for sub in node:
                     if sub.tag == inkex.addNS('style','svg'):
@@ -633,7 +643,7 @@ class SVG_READER(inkex.Effect):
             name_list[i]=" ".join(name_list[i].split())
             self.CSS_values.add(name_list[i],value_list[i])
 
-            
+
     def unit2mm(self, string): #,dpi=None):
         if string==None:
             return None
@@ -648,14 +658,14 @@ class SVG_READER(inkex.Effect):
                   'pc': 25.4/6.0,
                   'yd': 25.4*12*3,
                   'ft': 25.4*12}
-  
+
         unit = re.compile('(%s)$' % '|'.join(uuconv.keys()))
         param = re.compile(r'(([-+]?[0-9]+(\.[0-9]*)?|[-+]?\.[0-9]+)([eE][-+]?[0-9]+)?)')
 
         string = string.replace(' ','')
         p = param.match(string)
         u = unit.search(string)
-        
+
         if p:
             retval = float(p.string[p.start():p.end()])
         else:
@@ -668,7 +678,7 @@ class SVG_READER(inkex.Effect):
             return retval * uuconv[retunit]
         except KeyError:
             return None
-        
+
     def unit2px(self, string):
         if string==None:
             return None
@@ -684,17 +694,20 @@ class SVG_READER(inkex.Effect):
     def Make_PNG(self):
         #create OS temp folder
         tmp_dir = tempfile.mkdtemp()
-        
+        #tmp_dir = self.tempDir()
         if self.inkscape_exe != None:
-            try:                
+            try:
                 svg_temp_file = os.path.join(tmp_dir, "k40w_temp.svg")
                 png_temp_file = os.path.join(tmp_dir, "k40w_image.png")
-                dpi = "%d" %(self.image_dpi)           
+                dpi = "%d" %(self.image_dpi)
+                #print(dpi)
                 self.document.write(svg_temp_file)
+                #self.document.write("svg_temp_file.svg", encoding='utf-8')
 
                 # Check Version of Inkscape
                 cmd = [ self.inkscape_exe, "-V"]
                 (stdout,stderr)=run_external(cmd, self.timout)
+                #print(stdout)
                 if stdout.find(b'Inkscape 1.')==-1:
                     cmd = [ self.inkscape_exe, self.png_area, "--export-dpi", dpi, \
                             "--export-background","rgb(255, 255, 255)","--export-background-opacity", \
@@ -709,7 +722,7 @@ class SVG_READER(inkex.Effect):
                 self.raster_PIL = self.raster_PIL.convert("L")
             except Exception as e:
                 try:
-                    shutil.rmtree(tmp_dir) 
+                    shutil.rmtree(tmp_dir)
                 except:
                     pass
                 error_text = "%s" %(e)
@@ -717,7 +730,7 @@ class SVG_READER(inkex.Effect):
         else:
             raise Exception("Inkscape Not found.")
         try:
-            shutil.rmtree(tmp_dir) 
+            shutil.rmtree(tmp_dir)
         except:
             raise Exception("Temp dir failed to delete:\n%s" %(tmp_dir) )
 
@@ -725,11 +738,12 @@ class SVG_READER(inkex.Effect):
 ##    def open_cdr_file(self,filename):
 ##        #create OS temp folder
 ##        svg_temp_file=filename
-##        tmp_dir = tempfile.mkdtemp()
+##        #tmp_dir = tempfile.mkdtemp()
+##        tmp_dir = self.tempDir()
 ##        if self.inkscape_exe != None:
 ##            try:
 ##                #svg_temp_file = os.path.join(tmp_dir, "k40w_temp.svg")
-##                txt2path_file = os.path.join(tmp_dir, "txt2path.svg")         
+##                txt2path_file = os.path.join(tmp_dir, "txt2path.svg")
 ##                #self.document.write(svg_temp_file)
 ##                cmd = [ self.inkscape_exe, "--export-text-to-path","--export-plain-svg",txt2path_file, svg_temp_file ]
 ##                run_external(cmd, self.timout)
@@ -739,17 +753,39 @@ class SVG_READER(inkex.Effect):
 ##        else:
 ##            raise Exception("Inkscape Not found.")
 ##        try:
-##            shutil.rmtree(tmp_dir) 
+##            shutil.rmtree(tmp_dir)
 ##        except:
 ##            raise Exception("Temp dir failed to delete:\n%s" %(tmp_dir) )
+
+
+##    def tempDir(self):
+##        tmpdir = tempfile.mkdtemp()
+##        if os.path.isdir(tmpdir):
+##            print("first tmp dir exists")
+##            print(tmpdir)
+##            #raw_input("press any key...")
+##        else:
+##            print("try again")
+##            tmpdir_base = tempfile.gettempdir()
+##            print(tmpdir_base)
+##            tmpdir = tmpdir_base+"/k40whisperer"
+##            os.mkdir(tmpdir)
+##            if not os.path.isdir(tmpdir):
+##                print("still didn't work")
+##            #creatte folder intempdir
+##            #test if new dir exists
+##
+##        return tmpdir
+
 
     def convert_text2paths(self):
         #create OS temp folder
         tmp_dir = tempfile.mkdtemp()
+        #tmp_dir = self.tempDir()
         if self.inkscape_exe != None:
             try:
                 svg_temp_file = os.path.join(tmp_dir, "k40w_temp.svg")
-                txt2path_file = os.path.join(tmp_dir, "txt2path.svg")         
+                txt2path_file = os.path.join(tmp_dir, "txt2path.svg")
                 self.document.write(svg_temp_file)
 
                 # Check Version of Inkscape
@@ -761,7 +797,7 @@ class SVG_READER(inkex.Effect):
                 else:
                     cmd = [ self.inkscape_exe, "--export-text-to-path","--export-plain-svg", \
                             "--export-filename=%s" %(txt2path_file), svg_temp_file,  ]
-                
+
                 (stdout,stderr)=run_external(cmd, self.timout)
                 self.parse_svg(txt2path_file)
             except Exception as e:
@@ -769,7 +805,7 @@ class SVG_READER(inkex.Effect):
         else:
             raise Exception("Inkscape Not found.")
         try:
-            shutil.rmtree(tmp_dir) 
+            shutil.rmtree(tmp_dir)
         except:
             raise Exception("Temp dir failed to delete:\n%s" %(tmp_dir) )
 
@@ -781,14 +817,14 @@ class SVG_READER(inkex.Effect):
         self.document.getroot().set('height','%fmm' %(height_mm))
         self.document.getroot().set('viewBox', '%f %f %f %f' %(viewbox[0],viewbox[1],viewbox[2],viewbox[3]))
 
-        
+
     def make_paths(self, txt2paths=False ):
         self.txt2paths = txt2paths
         msg               = ""
 
         if (self.txt2paths):
             self.convert_text2paths()
-      
+
         #################
         ## GET VIEWBOX ##
         #################
@@ -816,7 +852,7 @@ class SVG_READER(inkex.Effect):
         w_px = self.unit2px(w_string)
         h_px = self.unit2px(h_string)
         self.SVG_Size = [w_mm, h_mm, w_px, h_px]
-                     
+
         if view_box_str!=None:
             view_box_list = view_box_str.split(' ')
             DXpix= float(view_box_list[0])
@@ -830,18 +866,18 @@ class SVG_READER(inkex.Effect):
         if h_mm==None or w_mm==None or self.SVG_ViewBox==None:
             line1  = "Cannot determine SVG size. Viewbox missing or Units not set."
             raise SVG_PXPI_EXCEPTION("%s" %(line1))
-        
+
         scale_h = h_mm/Hpix
         scale_w = w_mm/Wpix
         Dx = DXpix * scale_w
         Dy = DYpix * scale_h
-        
+
         if abs(1.0-scale_h/scale_w) > .01:
             line1 ="SVG Files with different scales in X and Y are not supported.\n"
             line2 ="In Inkscape (v0.92): 'File'-'Document Properties'"
             line3 ="on the 'Page' tab adjust 'Scale x:' in the 'Scale' section"
             raise Exception("%s\n%s\n%s" %(line1,line2,line3))
-        
+
         for node in self.document.getroot().xpath('//svg:g', namespaces=inkex.NSS):
             if node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer':
                 layer = node.get(inkex.addNS('label', 'inkscape'))
@@ -855,14 +891,14 @@ class SVG_READER(inkex.Effect):
 
         self.process_group(self.document.getroot())
 
-        
+
         #################################################
         xmin= 0.0
-        xmax=  w_mm 
-        ymin= -h_mm 
+        xmax=  w_mm
+        ymin= -h_mm
         ymax= 0.0
         self.Make_PNG()
-        
+
         self.Xsize=xmax-xmin
         self.Ysize=ymax-ymin
         Xcorner=xmin
@@ -883,7 +919,14 @@ class SVG_READER(inkex.Effect):
                 self.cut_lines.append([line[0],line[1],line[2],line[3]])
             else:
                 pass
-                
+
+    def strip_text(self,input):
+        try:
+            return input.strip()
+        except:
+            return ""
+
+
 if __name__ == '__main__':
     svg_reader =  SVG_READER()
     #svg_reader.parse("test.svg")

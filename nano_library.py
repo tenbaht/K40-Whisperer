@@ -2,7 +2,7 @@
 '''
 This script comunicated with the K40 Laser Cutter.
 
-Copyright (C) 2017-2020 Scorch www.scorchworks.com
+Copyright (C) 2017-2025 Scorch www.scorchworks.com
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ from egv import egv
 import traceback
 from windowsinhibitor import WindowsInhibitor
 from time import time
+import time as t
 
 ##############################################################################
 
@@ -45,11 +46,12 @@ class K40_CLASS:
         self.read_length= 168
 
         #### RESPONSE CODES ####
-        self.OK             = 206
-        self.BUFFER_FULL    = 238
-        self.CRC_ERROR      = 207
-        self.TASK_COMPLETE  = 236
-        self.UNKNOWN_2      = 239 #after failed initialization followed by succesful initialization
+        self.OK               = 206
+        self.BUFFER_FULL      = 238
+        self.CRC_ERROR        = 207
+        self.TASK_COMPLETE    = 236
+        self.UNKNOWN_2        = 239 #after failed initialization followed by succesful initialization
+        self.TASK_COMPLETE_M3 = 204
         #######################
         self.hello   = [160]
         self.unlock  = [166,0,73,83,50,80,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,166,15]
@@ -98,10 +100,11 @@ class K40_CLASS:
                 else:
                     print (".",)
             
-            if response[1]==self.OK            or \
-               response[1]==self.BUFFER_FULL   or \
-               response[1]==self.CRC_ERROR     or \
-               response[1]==self.TASK_COMPLETE or \
+            if response[1]==self.OK               or \
+               response[1]==self.BUFFER_FULL      or \
+               response[1]==self.CRC_ERROR        or \
+               response[1]==self.TASK_COMPLETE    or \
+               response[1]==self.TASK_COMPLETE_M3 or \
                response[1]==self.UNKNOWN_2:
                 return response[1]
             else:
@@ -128,8 +131,19 @@ class K40_CLASS:
         self.USB_Location = None
 
     def pause_un_pause(self):
-        self.send_data([ord('P'),ord('N')])
-    
+        try:
+            self.send_data([ord('P'),ord('N')])
+        except:
+            pass
+
+    def unfreeze(self):
+        try:
+            self.send_data([ord('F'),ord('N'),ord('S'),ord('E')])
+            #print("unfreeze sent")
+        except:
+            pass
+        
+        
     #######################################################################
     #  The one wire CRC algorithm is derived from the OneWire.cpp Library
     #  The latest version of this library may be found at:
@@ -161,7 +175,7 @@ class K40_CLASS:
         NoSleep = WindowsInhibitor()
         NoSleep.inhibit()
 
-        blank   = [166,0,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,166,0]
+        blank   = [166,0,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,166,80]
         packets = []
         packet  = blank[:]
         cnt=2
@@ -203,8 +217,13 @@ class K40_CLASS:
         packet[-1]=self.OneWireCRC(packet[1:len(packet)-2])
         if not preprocess_crc:
             self.send_packet_w_error_checking(packet,update_gui,stop_calc)
+            if cnt > 31:
+                self.send_packet_w_error_checking(blank,update_gui,stop_calc)
+            
         else:
             packets.append(packet)
+            if cnt > 31:
+                packets.append(blank[:])
             update_gui("CRC data and Packets are Ready")
         packet_cnt = 0
 
@@ -283,7 +302,7 @@ class K40_CLASS:
         FINISHED = False
         while not FINISHED:
             response = self.say_hello()
-            if response == self.TASK_COMPLETE:
+            if response == self.TASK_COMPLETE or response == self.TASK_COMPLETE_M3:
                 FINISHED = True
                 break
             elif response == None:
@@ -303,8 +322,16 @@ class K40_CLASS:
         raise Exception("Action Stopped by User.")
 
     def send_packet(self,line):
+        if (len(line)==34):
+            line[-1] = self.OneWireCRC(line[1:len(line)-2])
         self.dev.write(self.write_addr,line,self.timeout)
 
+    def print_command(self,data):
+        for x in data:
+            sys.stdout.write(chr(x))
+        sys.stdout.write("\n")
+
+        
     def rapid_move(self,dxmils,dymils):
         if (dxmils!=0 or dymils!=0):
             data=[]
@@ -399,6 +426,46 @@ class K40_CLASS:
             print (ctrlxfer)
 
         return self.USB_Location
+
+    def pulse_laser(self,pct_power,ms):
+        # power: 0-100%
+        ms=int(ms)
+        power = int(pct_power * 10)
+        m = int(power/254)
+        n = int(power%254)
+        #pack  = [166,0,65,84,48,m,n,ms,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        stop_calc=[]
+        stop_calc.append(0)
+        update_gui = self.none_function
+            
+        cnt=1
+        pack  = [166,0,65,84,48,m,n,254,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        while cnt < int(ms/254):
+            self.send_packet_w_error_checking(pack,update_gui=update_gui,stop_calc=stop_calc)
+            cnt=cnt+1
+        ms_left = ms%254
+        pack  = [166,0,65,84,48,m,n,ms_left,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        self.send_packet_w_error_checking(pack,update_gui=update_gui,stop_calc=stop_calc)
+        
+
+    def set_PWM_register(self,pct_power):
+        # power: 0-100%
+        power = int(pct_power * 10)
+        m = int(power/254)
+        n = int(power%254)
+        pack  = [166,0,65,84,49,m,n,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        self.send_packet(pack)
+        #print(power,m,n)
+
+    def disable_shot_laser(self):
+        pack  = [166,0,65,84,48,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        self.send_packet(pack)
+        #print(power,ms,m,n)
+
+    def hw_info(self):
+        pack  = [166,0,65,84,48,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,15]
+        self.send_packet(pack)
+        #print(power,ms,m,n)
     
     def hex2dec(self,hex_in):
         #format of "hex_in" is ["40","e7"]
@@ -408,6 +475,7 @@ class K40_CLASS:
         return dec_out
 
 if __name__ == "__main__":
+    import time as t
     k40=K40_CLASS()
     run_laser = False
 
@@ -422,11 +490,35 @@ if __name__ == "__main__":
     
     print('initialize with location=',USB_LOCATION)
     k40.initialize_device(k40.USB_Location,verbose=False)
-
-    print('hello',k40.say_hello())
+    k40.unlock_rail()
+    if (206==k40.say_hello()):
+        print("Unlock succeded")
+        
+    #print('hello',k40.say_hello())
     #print k40.reset_position()
     #print k40.unlock_rail()
-    print ("DONE")
+
+    #self.unlock  = [166,0,73,83,50,80,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,166,15]
+    #self.home    = [166,0,65,84, 0,0,   ,0  ,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,166,228]
+    #print(len(self.home))
+
+    if False:
+        for pct_power in range(0,100,1):
+            ms=254
+            #k40.set_PWM_register(pct_power)
+            k40.pulse_laser(pct_power,ms)
+            t.sleep(.5)
+
+    #k40.set_PWM_register(90)
+    #print('hello',k40.say_hello())
+
+    k40.pulse_laser(15,1000)
+    #k40.disable_shot_laser()
+    #print('hello',k40.say_hello())
+    #k40.hw_info()
+    #print('hello',k40.say_hello())
+    
+    print("DONE")
 
     
 
